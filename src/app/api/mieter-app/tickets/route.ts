@@ -1,0 +1,173 @@
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import { TicketCategory } from "@prisma/client";
+import { NextRequest, NextResponse } from "next/server";
+import { formatCategory } from "@/lib/format";
+import { hasUnreadFromLandlordForTenant } from "@/lib/ticket-chat-read";
+import { getMieterSessionUser } from "@/lib/tenant-auth";
+import { db } from "@/lib/db";
+import { isTicketCategory } from "@/mieter-app/options";
+
+export const runtime = "nodejs";
+
+const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tickets");
+const MAX_BYTES = 8 * 1024 * 1024;
+
+function isImageBuffer(buf: Buffer) {
+  if (buf.length < 4) return false;
+  if (buf[0] === 0xff && buf[1] === 0xd8) return true;
+  if (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) {
+    return true;
+  }
+  if (buf.subarray(0, 3).toString("ascii") === "GIF") return true;
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buf.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export async function GET() {
+  const user = await getMieterSessionUser();
+  if (!user?.tenantId) {
+    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  }
+
+  const rows = await db.ticket.findMany({
+    where: { tenantId: user.tenantId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      notes: {
+        where: { isInternal: false },
+        select: { createdAt: true, isTenantAuthor: true }
+      },
+      appointmentProposals: {
+        select: { status: true, createdAt: true, respondedAt: true }
+      }
+    }
+  });
+
+  const payload = rows.map((row) => {
+    const { notes, appointmentProposals, ...rest } = row;
+    const publicNotes = notes.map((n) => ({
+      createdAt: n.createdAt,
+      isInternal: false as const,
+      isTenantAuthor: n.isTenantAuthor
+    }));
+    const unreadFromLandlord = hasUnreadFromLandlordForTenant(
+      {
+        createdAt: row.createdAt,
+        tenantLastSeenChatAt: row.tenantLastSeenChatAt,
+        tenantLastSeenAppointmentsAt: row.tenantLastSeenAppointmentsAt,
+        notes: publicNotes
+      },
+      appointmentProposals
+    );
+    return { ...rest, unreadFromLandlord };
+  });
+
+  return NextResponse.json(payload);
+}
+
+export async function POST(request: NextRequest) {
+  const user = await getMieterSessionUser();
+  if (!user?.tenantId) {
+    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Ungültige Formulardaten." }, { status: 400 });
+  }
+
+  const categoryRaw = formData.get("category");
+  const locationRaw = formData.get("location");
+  const descriptionRaw = formData.get("description");
+  const isUrgentRaw = formData.get("isUrgent");
+
+  const category =
+    typeof categoryRaw === "string" ? categoryRaw.trim() : "";
+  const location =
+    typeof locationRaw === "string" ? locationRaw.trim() : "";
+
+  if (!isTicketCategory(category)) {
+    return NextResponse.json({ error: "Bitte eine Kategorie wählen." }, { status: 400 });
+  }
+  if (!location) {
+    return NextResponse.json({ error: "Bitte einen Ort wählen." }, { status: 400 });
+  }
+
+  const description =
+    typeof descriptionRaw === "string" && descriptionRaw.trim().length > 0
+      ? descriptionRaw.trim()
+      : "—";
+
+  const isUrgent =
+    isUrgentRaw === "true" ||
+    isUrgentRaw === "on" ||
+    isUrgentRaw === "1";
+
+  const file = formData.get("file");
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return NextResponse.json(
+      { error: "Bitte ein Foto des Schadens hochladen (Pflichtfeld)." },
+      { status: 400 }
+    );
+  }
+
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json(
+      { error: "Das Bild ist zu groß (max. 8 MB)." },
+      { status: 400 }
+    );
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!isImageBuffer(buffer)) {
+    return NextResponse.json(
+      { error: "Bitte ein Bild (JPEG, PNG, WebP oder GIF) hochladen." },
+      { status: 400 }
+    );
+  }
+
+  const ext =
+    file.type === "image/png"
+      ? "png"
+      : file.type === "image/webp"
+        ? "webp"
+        : file.type === "image/gif"
+          ? "gif"
+          : "jpg";
+  const stored = `${randomUUID()}.${ext}`;
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  await writeFile(path.join(UPLOAD_DIR, stored), buffer);
+  const imageUrl = `/uploads/tickets/${stored}`;
+
+  const cat = category as TicketCategory;
+  const title = `${formatCategory(cat)} – ${location}`;
+
+  const ticket = await db.ticket.create({
+    data: {
+      title,
+      description,
+      location,
+      category: cat,
+      isUrgent,
+      tenantId: user.tenantId,
+      imageUrl
+    }
+  });
+
+  return NextResponse.json({ id: ticket.id }, { status: 201 });
+}

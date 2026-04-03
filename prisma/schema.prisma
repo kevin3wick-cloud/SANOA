@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  LANDLORD
+  MIETER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum TicketCategory {
+  SANITAER
+  HEIZUNG
+  ELEKTRO
+  FENSTER_TUEREN
+  ALLGEMEIN
+  SONSTIGES
+}
+
+enum DocumentVisibility {
+  INTERNAL
+  TENANT_VISIBLE
+}
+
+enum DocumentKind {
+  MIETVERTRAG
+  HAUSORDNUNG
+  NEBENKOSTEN
+  MITTEILUNG
+  SONSTIGES
+}
+
+enum AppointmentProposalStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(LANDLORD)
+  tenantId  String?  @unique
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tenant {
+  id          String    @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  apartment   String
+  leaseStart  DateTime?
+  leaseEnd    DateTime?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tickets     Ticket[]
+  documents   Document[]
+  user        User?
+}
+
+model Ticket {
+  id                     String                     @id @default(cuid())
+  title                  String
+  description            String
+  location               String
+  imageUrl               String?
+  status                 TicketStatus               @default(OPEN)
+  category               TicketCategory
+  isUrgent               Boolean                    @default(false)
+  tenantId               String
+  tenant                 Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  tenantLastSeenChatAt           DateTime?
+  landlordLastSeenChatAt         DateTime?
+  tenantLastSeenAppointmentsAt   DateTime?
+  landlordLastSeenAppointmentsAt DateTime?
+  notes                    TicketNote[]
+  appointmentProposals     TicketAppointmentProposal[]
+}
+
+model TicketAppointmentProposal {
+  id          String                    @id @default(cuid())
+  ticketId    String
+  ticket      Ticket                    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message     String
+  status      AppointmentProposalStatus @default(PENDING)
+  createdAt   DateTime                  @default(now())
+  respondedAt DateTime?
+
+  @@index([ticketId])
+}
+
+model TicketNote {
+  id               String   @id @default(cuid())
+  ticketId         String
+  ticket           Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  text             String
+  isInternal       Boolean  @default(true)
+  isTenantAuthor   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+model Document {
+  id                 String             @id @default(cuid())
+  name               String
+  originalFilename   String             @default("")
+  fileUrl            String
+  visibility         DocumentVisibility @default(INTERNAL)
+  kind               DocumentKind       @default(SONSTIGES)
+  tenantId           String?
+  tenant             Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  archivedAt         DateTime?
+  createdAt          DateTime           @default(now())
+}
