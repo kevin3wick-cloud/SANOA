@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Building2 } from "lucide-react";
 import { LoginForm } from "@/components/ui/login-form";
 

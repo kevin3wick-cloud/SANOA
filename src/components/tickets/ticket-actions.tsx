@@ -45,13 +45,6 @@ export function TicketActions({ ticketId, currentStatus }: TicketActionsProps) {
         <button type="button" onClick={() => updateStatus(status)}>
           Status speichern
         </button>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => updateStatus("DONE")}
-        >
-          Als erledigt markieren
-        </button>
       </div>
       {feedback && <p className="muted">{feedback}</p>}
     </div>

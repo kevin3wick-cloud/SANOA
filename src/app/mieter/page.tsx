@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantCreateForm } from "@/components/mieter/tenant-create-form";

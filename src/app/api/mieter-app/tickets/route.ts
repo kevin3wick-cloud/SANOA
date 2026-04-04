@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
   const categoryRaw = formData.get("category");
   const locationRaw = formData.get("location");
   const descriptionRaw = formData.get("description");
-  const isUrgentRaw = formData.get("isUrgent");
 
   const category =
     typeof categoryRaw === "string" ? categoryRaw.trim() : "";
@@ -109,14 +108,13 @@ export async function POST(request: NextRequest) {
   }
 
   const description =
-    typeof descriptionRaw === "string" && descriptionRaw.trim().length > 0
-      ? descriptionRaw.trim()
-      : "—";
-
-  const isUrgent =
-    isUrgentRaw === "true" ||
-    isUrgentRaw === "on" ||
-    isUrgentRaw === "1";
+    typeof descriptionRaw === "string" ? descriptionRaw.trim() : "";
+  if (description.length < 3) {
+    return NextResponse.json(
+      { error: "Bitte eine Kurzbeschreibung mit mindestens 3 Zeichen eingeben." },
+      { status: 400 }
+    );
+  }
 
   const file = formData.get("file");
   if (!file || !(file instanceof File) || file.size === 0) {
@@ -163,7 +161,7 @@ export async function POST(request: NextRequest) {
       description,
       location,
       category: cat,
-      isUrgent,
+      isUrgent: false,
       tenantId: user.tenantId,
       imageUrl
     }

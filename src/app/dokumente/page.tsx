@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { DocumentVisibility } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { DocumentUploadForm } from "@/components/ui/document-upload-form";
@@ -50,7 +52,7 @@ export default async function DokumentePage() {
                         {doc.name}
                       </a>
                     </td>
-                    <td>{doc.tenant?.name ?? "-"}</td>
+                    <td>{doc.tenant?.name ?? "Alle Mieter"}</td>
                     <td>
                       {doc.visibility === DocumentVisibility.INTERNAL
                         ? "Intern"

@@ -13,9 +13,14 @@ export async function GET(request: NextRequest) {
   const filter = request.nextUrl.searchParams.get("filter") ?? "current";
 
   const where: Prisma.DocumentWhereInput = {
-    visibility: DocumentVisibility.TENANT_VISIBLE,
-    OR: [{ tenantId: user.tenantId }, { tenantId: null }]
+    visibility: DocumentVisibility.TENANT_VISIBLE
   };
+
+  if (filter === "all-tenants") {
+    where.tenantId = null;
+  } else {
+    where.OR = [{ tenantId: user.tenantId }, { tenantId: null }];
+  }
 
   if (filter === "archive") {
     where.archivedAt = { not: null };

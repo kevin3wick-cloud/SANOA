@@ -115,18 +115,24 @@ export function DocumentUploadForm({ tenants }: DocumentUploadFormProps) {
           disabled={pending}
         />
       </div>
-      <select
-        value={tenantId}
-        onChange={(event) => setTenantId(event.target.value)}
-        disabled={pending}
-      >
-        <option value="">Keinem Mieter zuordnen</option>
-        {tenants.map((tenant) => (
-          <option value={tenant.id} key={tenant.id}>
-            {tenant.name}
-          </option>
-        ))}
-      </select>
+      <div className="stack" style={{ gap: 6 }}>
+        <label className="muted" htmlFor="document-tenant-select" style={{ fontSize: 13 }}>
+          Zuordnung
+        </label>
+        <select
+          id="document-tenant-select"
+          value={tenantId}
+          onChange={(event) => setTenantId(event.target.value)}
+          disabled={pending}
+        >
+          <option value="">Alle Mieter</option>
+          {tenants.map((tenant) => (
+            <option value={tenant.id} key={tenant.id}>
+              {tenant.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="stack" style={{ gap: 6 }}>
         <label className="muted" htmlFor="document-kind-select" style={{ fontSize: 13 }}>
           Kategorie (Typ)

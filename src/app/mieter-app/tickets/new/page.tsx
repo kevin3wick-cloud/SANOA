@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { requireMieterSession } from "@/lib/tenant-auth";
 import { MieterNav } from "../../_components/mieter-nav";
 import { MieterNewTicketForm } from "../../_components/mieter-new-ticket-form";

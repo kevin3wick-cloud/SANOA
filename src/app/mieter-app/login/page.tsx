@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { redirect } from "next/navigation";
 import { Home } from "lucide-react";
 import { getMieterSessionUser } from "@/lib/tenant-auth";

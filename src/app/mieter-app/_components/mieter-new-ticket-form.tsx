@@ -12,7 +12,6 @@ export function MieterNewTicketForm() {
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -31,17 +30,18 @@ export function MieterNewTicketForm() {
       return;
     }
 
+    const desc = description.trim();
+    if (desc.length < 3) {
+      setError("Bitte eine Kurzbeschreibung mit mindestens 3 Zeichen eingeben.");
+      return;
+    }
+
     setPending(true);
     const formData = new FormData();
     formData.set("category", category);
     formData.set("location", location);
     formData.set("file", file);
-    if (description.trim()) {
-      formData.set("description", description.trim());
-    }
-    if (isUrgent) {
-      formData.set("isUrgent", "true");
-    }
+    formData.set("description", desc);
 
     try {
       const response = await fetch("/api/mieter-app/tickets", {
@@ -123,7 +123,7 @@ export function MieterNewTicketForm() {
 
       <div className="stack" style={{ gap: 6 }}>
         <label className="muted" htmlFor="mieter-desc" style={{ fontSize: 13 }}>
-          Kurzbeschreibung (optional)
+          Kurzbeschreibung <span style={{ color: "var(--accent)" }}>*</span>
         </label>
         <textarea
           id="mieter-desc"
@@ -132,28 +132,10 @@ export function MieterNewTicketForm() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Was ist passiert?"
           disabled={pending}
+          required
+          minLength={3}
         />
       </div>
-
-      <label
-        className="muted"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 14,
-          cursor: "pointer"
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={isUrgent}
-          onChange={(e) => setIsUrgent(e.target.checked)}
-          disabled={pending}
-          style={{ width: "auto" }}
-        />
-        Dringend
-      </label>
 
       <button type="submit" disabled={pending}>
         {pending ? "Wird gesendet …" : "Anfrage absenden"}

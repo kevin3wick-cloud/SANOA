@@ -46,11 +46,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const leaseStart = parseOptionalDateInput(body.leaseStart);
-  const leaseEnd = parseLeaseEndDateInput(body.leaseEnd);
-  if (body.leaseStart?.trim() && !leaseStart) {
+  const leaseStartRaw = body.leaseStart?.trim();
+  if (!leaseStartRaw) {
+    return NextResponse.json(
+      { error: "Mietbeginn ist erforderlich." },
+      { status: 400 }
+    );
+  }
+  const leaseStart = parseOptionalDateInput(leaseStartRaw);
+  if (!leaseStart) {
     return NextResponse.json({ error: "Ungültiges Mietbeginn-Datum." }, { status: 400 });
   }
+  const leaseEnd = parseLeaseEndDateInput(body.leaseEnd);
   if (body.leaseEnd?.trim() && !leaseEnd) {
     return NextResponse.json({ error: "Ungültiges Mietende-Datum." }, { status: 400 });
   }

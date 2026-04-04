@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from "next/link";
 import { CircleDot } from "lucide-react";
 import { hasUnreadFromLandlordForTenant } from "@/lib/ticket-chat-read";

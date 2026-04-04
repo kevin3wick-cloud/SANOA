@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { TicketStatus } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { TicketsBoardSection } from "@/components/tickets/tickets-board-section";
@@ -49,9 +51,18 @@ export default async function TicketsPage() {
           </p>
         </div>
 
-        <TicketsBoardSection id="tickets-offen" title="Offen" tickets={openTickets} />
-        <TicketsBoardSection title="In Bearbeitung" tickets={progressTickets} />
-        <TicketsBoardSection title="Erledigt" tickets={doneTickets} />
+        <TicketsBoardSection
+          id="tickets-offen"
+          title="Offen"
+          tone="open"
+          tickets={openTickets}
+        />
+        <TicketsBoardSection
+          title="In Bearbeitung"
+          tone="progress"
+          tickets={progressTickets}
+        />
+        <TicketsBoardSection title="Erledigt" tone="done" tickets={doneTickets} />
       </div>
     </AppShell>
   );

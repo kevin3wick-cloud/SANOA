@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { AppShell } from "@/components/layout/app-shell";
 import { SettingsPanels } from "@/components/ui/settings-panels";
 import { db } from "@/lib/db";

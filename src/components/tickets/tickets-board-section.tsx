@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { TicketCategory } from "@prisma/client";
 import { useMemo, useState } from "react";
-import { formatCategory, formatDate, formatStatus } from "@/lib/format";
+import { formatCategory, formatDate, formatStatus, getStatusBadgeClassName } from "@/lib/format";
 import type { TicketWithTenantAndUnread } from "@/lib/ticket-board-rows";
 
 type FilterValues = {
@@ -48,13 +48,22 @@ function hasAnyFilter(f: FilterValues) {
   );
 }
 
+export type TicketsBoardTone = "open" | "progress" | "done";
+
 type TicketsBoardSectionProps = {
   id?: string;
   title: string;
+  /** Farbakzent für die Spalten-Überschrift (Offen / In Bearbeitung / Erledigt). */
+  tone?: TicketsBoardTone;
   tickets: TicketWithTenantAndUnread[];
 };
 
-export function TicketsBoardSection({ id, title, tickets }: TicketsBoardSectionProps) {
+function sectionToneClass(tone: TicketsBoardTone | undefined) {
+  if (!tone) return "";
+  return `tickets-board-section--${tone}`;
+}
+
+export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSectionProps) {
   const [titleQ, setTitleQ] = useState("");
   const [tenantName, setTenantName] = useState("");
   const [apartment, setApartment] = useState("");
@@ -90,7 +99,10 @@ export function TicketsBoardSection({ id, title, tickets }: TicketsBoardSectionP
 
   if (tickets.length === 0) {
     return (
-      <section id={id} className="tickets-board-section card">
+      <section
+        id={id}
+        className={`tickets-board-section card ${sectionToneClass(tone)}`.trim()}
+      >
         <div className="tickets-board-head">
           <h2 className="tickets-board-title">{title}</h2>
           <span className="muted tickets-board-count">0</span>
@@ -101,7 +113,7 @@ export function TicketsBoardSection({ id, title, tickets }: TicketsBoardSectionP
   }
 
   return (
-    <section id={id} className="tickets-board-section card">
+    <section id={id} className={`tickets-board-section card ${sectionToneClass(tone)}`.trim()}>
       <div className="tickets-board-head">
         <h2 className="tickets-board-title">{title}</h2>
         <span className="muted tickets-board-count">{countLabel}</span>
@@ -232,7 +244,11 @@ export function TicketsBoardSection({ id, title, tickets }: TicketsBoardSectionP
                       <span className="muted">—</span>
                     )}
                   </td>
-                  <td>{formatStatus(ticket.status)}</td>
+                  <td>
+                    <span className={getStatusBadgeClassName(ticket.status)}>
+                      {formatStatus(ticket.status)}
+                    </span>
+                  </td>
                   <td>{formatDate(ticket.createdAt)}</td>
                 </tr>
               ))

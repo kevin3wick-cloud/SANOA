@@ -31,7 +31,7 @@ export function TenantCreateForm() {
           phone: phone.trim(),
           apartment: apartment.trim(),
           password,
-          ...(leaseStart ? { leaseStart } : {}),
+          leaseStart,
           ...(leaseEnd ? { leaseEnd } : {})
         })
       });
@@ -109,13 +109,14 @@ export function TenantCreateForm() {
           required
         />
         <label className="muted" style={{ fontSize: 13 }}>
-          Mietbeginn (optional)
+          Mietbeginn <span style={{ color: "var(--accent)" }}>*</span>
         </label>
         <input
           type="date"
           value={leaseStart}
           onChange={(e) => setLeaseStart(e.target.value)}
           disabled={pending}
+          required
         />
         <label className="muted" style={{ fontSize: 13 }}>
           Mietende / Auszug (optional)

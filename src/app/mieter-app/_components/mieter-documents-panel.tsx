@@ -10,13 +10,14 @@ type DocumentRow = Omit<Document, "createdAt" | "archivedAt"> & {
   archivedAt: string | null;
 };
 
-type FilterValue = "current" | "archive" | "all";
+type FilterValue = "current" | "archive" | "all" | "all-tenants";
 
-const FILTER_LABELS: Record<FilterValue, string> = {
-  current: "Aktuell",
-  archive: "Archiv",
-  all: "Alle"
-};
+const DOCUMENT_FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
+  { value: "current", label: "Aktuell" },
+  { value: "archive", label: "Archiv" },
+  { value: "all", label: "Alle" },
+  { value: "all-tenants", label: "Alle Mieter" }
+];
 
 export function MieterDocumentsPanel() {
   const router = useRouter();
@@ -83,9 +84,9 @@ export function MieterDocumentsPanel() {
             onChange={(e) => setFilter(e.target.value as FilterValue)}
             style={{ width: "auto", minWidth: 120 }}
           >
-            {(Object.keys(FILTER_LABELS) as FilterValue[]).map((key) => (
-              <option value={key} key={key}>
-                {FILTER_LABELS[key]}
+            {DOCUMENT_FILTER_OPTIONS.map(({ value, label }) => (
+              <option value={value} key={value}>
+                {label}
               </option>
             ))}
           </select>
@@ -96,7 +97,9 @@ export function MieterDocumentsPanel() {
           ? "Aktuelle Unterlagen von Ihrer Verwaltung."
           : filter === "archive"
             ? "Ältere Versionen (automatisch archiviert, sobald etwas Neues hochgeladen wird)."
-            : "Alle für Sie freigegebenen Dokumente."}
+            : filter === "all-tenants"
+              ? "Allgemeine Unterlagen für alle Mieter (nicht nur für Ihre Wohnung)."
+              : "Alle für Sie freigegebenen Dokumente."}
       </p>
       <p className="muted" style={{ margin: 0, fontSize: 12 }}>
         Hinweis: Es erscheinen nur PDFs, die die Verwaltung als „Für Mieter sichtbar“ hochlädt und
