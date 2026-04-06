@@ -27,7 +27,8 @@ export function LoginForm() {
         setError(data.error ?? "Anmeldung fehlgeschlagen.");
         return;
       }
-      router.push("/dashboard");
+      const destination = data.user?.role === "ADMIN" ? "/admin" : "/dashboard";
+      router.push(destination);
       router.refresh();
     } catch {
       setError("Netzwerkfehler. Bitte versuche es erneut.");

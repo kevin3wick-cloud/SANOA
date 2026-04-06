@@ -5,6 +5,7 @@ const MIETER_COOKIE = "sanoa_mieter_session";
 
 const LANDLORD_ROUTES = [
   "/dashboard",
+  "/admin",
   "/mieter",
   "/tickets",
   "/einstellungen",
@@ -41,6 +42,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/admin/:path*",
     "/mieter/:path*",
     "/tickets/:path*",
     "/einstellungen/:path*",

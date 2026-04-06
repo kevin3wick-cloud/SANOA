@@ -23,6 +23,8 @@ import {
   getTicketPriority,
   type TicketPriorityLevel
 } from "@/lib/ticket-priority";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
+import { redirect } from "next/navigation";
 
 const MS_TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
 
@@ -48,6 +50,11 @@ function priorityBadgeClass(level: TicketPriorityLevel) {
 }
 
 export default async function DashboardPage() {
+  const sessionUser = await getLandlordSessionUser();
+  if ((sessionUser?.role as string) === "ADMIN") {
+    redirect("/admin");
+  }
+
   const twoDaysAgo = new Date(Date.now() - MS_TWO_DAYS);
 
   const [
