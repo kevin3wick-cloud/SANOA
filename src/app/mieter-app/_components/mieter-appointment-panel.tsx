@@ -6,12 +6,10 @@ import { AppointmentProposalStatus } from "@prisma/client";
 import { formatDate } from "@/lib/format";
 import { CalendarPlus } from "lucide-react";
 
-function generateICS(message: string, ticketTitle: string, respondedAt: string | null): string {
+function generateICS(message: string, ticketTitle: string, startAt: string | null, endAt: string | null): string {
   const now = new Date();
-  const eventDate = respondedAt ? new Date(respondedAt) : now;
-  // Use the next occurrence of the date as the event day (fallback: +1 day from confirmation)
-  const start = eventDate;
-  const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
+  const start = startAt ? new Date(startAt) : now;
+  const end = endAt ? new Date(endAt) : new Date(start.getTime() + 60 * 60 * 1000);
 
   function pad(n: number) {
     return String(n).padStart(2, "0");
@@ -43,14 +41,16 @@ function generateICS(message: string, ticketTitle: string, respondedAt: string |
 function AddToCalendarButton({
   message,
   ticketTitle,
-  respondedAt,
+  startAt,
+  endAt,
 }: {
   message: string;
   ticketTitle: string;
-  respondedAt: string | null;
+  startAt: string | null;
+  endAt: string | null;
 }) {
   function handleClick() {
-    const ics = generateICS(message, ticketTitle, respondedAt);
+    const ics = generateICS(message, ticketTitle, startAt, endAt);
     const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -88,6 +88,8 @@ type Props = {
     status: AppointmentProposalStatus;
     createdAt: string;
     respondedAt: string | null;
+    startAt: string | null;
+    endAt: string | null;
   }[];
 };
 
@@ -185,7 +187,8 @@ export function MieterAppointmentPanel({
                       <AddToCalendarButton
                         message={h.message}
                         ticketTitle={ticketTitle}
-                        respondedAt={h.respondedAt}
+                        startAt={h.startAt}
+                        endAt={h.endAt}
                       />
                     </div>
                   )}

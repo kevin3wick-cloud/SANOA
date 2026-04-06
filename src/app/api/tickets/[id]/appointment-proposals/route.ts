@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 
 type Body = {
   message?: string;
+  startAt?: string;
+  endAt?: string;
 };
 
 export async function POST(
@@ -13,6 +15,8 @@ export async function POST(
   const { id: ticketId } = await params;
   const body = (await request.json()) as Body;
   const message = body.message?.trim();
+  const startAt = body.startAt ? new Date(body.startAt) : null;
+  const endAt = body.endAt ? new Date(body.endAt) : (startAt ? new Date(startAt.getTime() + 60 * 60 * 1000) : null);
 
   if (!message || message.length < 3) {
     return NextResponse.json(
@@ -40,7 +44,8 @@ export async function POST(
     await tx.ticketAppointmentProposal.create({
       data: {
         ticketId,
-        message: message.slice(0, 2000)
+        message: message.slice(0, 2000),
+        ...(startAt && { startAt, endAt })
       }
     });
   });

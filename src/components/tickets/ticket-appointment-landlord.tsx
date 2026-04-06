@@ -79,12 +79,14 @@ export function TicketAppointmentLandlord({ ticketId, proposals }: Props) {
       setFeedback("Bitte einen gültigen Termin wählen.");
       return;
     }
+    const startIso = parsed.toISOString();
+    const endIso = new Date(parsed.getTime() + 60 * 60 * 1000).toISOString();
     setPending(true);
     try {
       const res = await fetch(`/api/tickets/${ticketId}/appointment-proposals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, startAt: startIso, endAt: endIso })
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -123,6 +125,7 @@ export function TicketAppointmentLandlord({ ticketId, proposals }: Props) {
             type="datetime-local"
             value={slot}
             min={minSlot}
+            step={300}
             onChange={(e) => setSlot(e.target.value)}
             disabled={pending}
           />

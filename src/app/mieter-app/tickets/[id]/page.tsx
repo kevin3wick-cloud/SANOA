@@ -152,7 +152,9 @@ export default async function MieterTicketDetailPage({ params }: PageProps) {
               message: p.message,
               status: p.status,
               createdAt: p.createdAt.toISOString(),
-              respondedAt: p.respondedAt?.toISOString() ?? null
+              respondedAt: p.respondedAt?.toISOString() ?? null,
+              startAt: p.startAt?.toISOString() ?? null,
+              endAt: p.endAt?.toISOString() ?? null
             }))}
           />
         </div>

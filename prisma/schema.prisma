@@ -102,6 +102,8 @@ model TicketAppointmentProposal {
   ticketId    String
   ticket      Ticket                    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   message     String
+  startAt     DateTime?
+  endAt       DateTime?
   status      AppointmentProposalStatus @default(PENDING)
   createdAt   DateTime                  @default(now())
   respondedAt DateTime?
