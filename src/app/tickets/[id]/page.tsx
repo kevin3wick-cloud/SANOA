@@ -30,22 +30,21 @@ function getPriority(ticket: { category: TicketCategory; status: TicketStatus })
 export default async function TicketDetailPage({ params }: TicketDetailProps) {
   const { id } = await params;
 
-  const [ticket, teamMembers] = await Promise.all([
-    db.ticket.findUnique({
-      where: { id },
-      include: {
-        tenant: true,
-        assignedTo: { select: { id: true, name: true } },
-        notes: { orderBy: { createdAt: "asc" } },
-        appointmentProposals: { orderBy: { createdAt: "desc" } },
-      },
-    }),
-    db.user.findMany({
-      where: { role: "LANDLORD" },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-  ]);
+  const ticket = await db.ticket.findUnique({
+    where: { id },
+    include: {
+      tenant: true,
+      assignedTo: { select: { id: true, name: true } },
+      notes: { orderBy: { createdAt: "asc" } },
+      appointmentProposals: { orderBy: { createdAt: "desc" } },
+    },
+  });
+
+  const teamMembers = await db.user.findMany({
+    where: { role: "LANDLORD" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   if (!ticket) {
     notFound();

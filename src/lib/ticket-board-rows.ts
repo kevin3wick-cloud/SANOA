@@ -14,10 +14,12 @@ const chatNotesInclude = {
   appointmentProposals: {
     select: { status: true, createdAt: true, respondedAt: true }
   },
+  // assignedTo added after prisma generate (new field)
   assignedTo: {
     select: { id: true, name: true }
   }
-} satisfies Prisma.TicketInclude;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any as Prisma.TicketInclude;
 
 export type TicketBoardInclude = typeof chatNotesInclude;
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { db } from "@/lib/db";
-import { OrgRole } from "@prisma/client";
+
+type OrgRole = "ORG_ADMIN" | "ORG_USER" | "ORG_GUEST";
 
 type Body = {
   name?: string;
