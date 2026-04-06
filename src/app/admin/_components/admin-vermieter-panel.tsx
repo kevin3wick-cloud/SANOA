@@ -153,6 +153,7 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
   const [newIsOrgAdmin, setNewIsOrgAdmin] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [roleChanging, setRoleChanging] = useState<string | null>(null);
 
   useEffect(() => {
     void loadVermieter();
@@ -202,6 +203,24 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
       setFeedback({ type: "err", msg: "Netzwerkfehler." });
     } finally {
       setAddLoading(false);
+    }
+  }
+
+  async function changeOrgRole(id: string, orgRole: OrgRole) {
+    setRoleChanging(id);
+    try {
+      const res = await fetch(`/api/admin/vermieter/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgRole }),
+      });
+      if (res.ok) {
+        setVermieterList((prev) =>
+          prev.map((u) => (u.id === id ? { ...u, orgRole } : u))
+        );
+      }
+    } finally {
+      setRoleChanging(null);
     }
   }
 
@@ -377,6 +396,29 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
                       <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--color-muted, #6b7280)" }}>
                         {u.email}
                       </p>
+                      {/* Rolle ändern */}
+                      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                        {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            disabled={u.orgRole === r || roleChanging === u.id}
+                            onClick={() => void changeOrgRole(u.id, r)}
+                            style={{
+                              fontSize: 11,
+                              padding: "3px 8px",
+                              borderRadius: 8,
+                              border: `1px solid ${u.orgRole === r ? ORG_ROLE_COLORS[r] : "var(--color-border, #e5e7eb)"}`,
+                              background: u.orgRole === r ? ORG_ROLE_COLORS[r] + "18" : "transparent",
+                              color: u.orgRole === r ? ORG_ROLE_COLORS[r] : "var(--color-muted, #6b7280)",
+                              cursor: u.orgRole === r ? "default" : "pointer",
+                              fontWeight: u.orgRole === r ? 600 : 400,
+                            }}
+                          >
+                            {ORG_ROLE_LABELS[r]}
+                          </button>
+                        ))}
+                      </div>
                       <ResetPasswordInline userId={u.id} name={u.name} />
                     </div>
                     <button
