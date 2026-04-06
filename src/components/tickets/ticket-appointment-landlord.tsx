@@ -52,21 +52,38 @@ function buildProposalMessage(slotLocal: string, note: string): string {
 
 export function TicketAppointmentLandlord({ ticketId, proposals }: Props) {
   const router = useRouter();
-  const [slot, setSlot] = useState("");
+  const [slotDate, setSlotDate] = useState("");
+  const [slotTime, setSlotTime] = useState("");
   const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState("");
   const [pending, setPending] = useState(false);
-  const [minSlot, setMinSlot] = useState<string | undefined>(undefined);
+  const [minDate, setMinDate] = useState<string | undefined>(undefined);
+  const [minTime, setMinTime] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    setMinSlot(toDatetimeLocalValue(new Date()));
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    setMinDate(`${y}-${m}-${d}`);
+    // Round up to next 5-min mark for minTime
+    const totalMin = now.getHours() * 60 + now.getMinutes();
+    const rounded = Math.ceil(totalMin / 5) * 5;
+    const h = String(Math.floor(rounded / 60) % 24).padStart(2, "0");
+    const min = String(rounded % 60).padStart(2, "0");
+    setMinTime(`${h}:${min}`);
   }, []);
+
+  // If selected date is today, enforce minTime; otherwise no time restriction
+  const effectiveMinTime = slotDate && minDate && slotDate === minDate ? minTime : undefined;
+
+  const slot = slotDate && slotTime ? `${slotDate}T${slotTime}` : "";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback("");
-    if (!slot.trim()) {
-      setFeedback("Bitte Datum und Uhrzeit über den Kalender wählen.");
+    if (!slotDate || !slotTime) {
+      setFeedback("Bitte Datum und Uhrzeit wählen.");
       return;
     }
     const parsed = new Date(slot);
@@ -94,7 +111,8 @@ export function TicketAppointmentLandlord({ ticketId, proposals }: Props) {
         setPending(false);
         return;
       }
-      setSlot("");
+      setSlotDate("");
+      setSlotTime("");
       setNote("");
       setFeedback("Terminvorschlag wurde an den Mieter gesendet.");
       router.refresh();
@@ -111,24 +129,37 @@ export function TicketAppointmentLandlord({ ticketId, proposals }: Props) {
     <div className="card stack">
       <h3 style={{ margin: 0 }}>Termin mit Handwerker</h3>
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        Wählen Sie Datum und Uhrzeit im Kalender. Der Mieter sieht den Vorschlag als Text und kann ihn
+        Wählen Sie Datum und Uhrzeit. Der Mieter sieht den Vorschlag als Text und kann ihn
         bestätigen oder ablehnen.
       </p>
       <form className="stack" onSubmit={onSubmit}>
         <div className="stack" style={{ gap: 6 }}>
-          <label htmlFor="handwerker-termin" className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
+          <label className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
             Datum und Uhrzeit
           </label>
-          <input
-            id="handwerker-termin"
-            className="appointment-handwerker-datetime"
-            type="datetime-local"
-            value={slot}
-            min={minSlot}
-            step={300}
-            onChange={(e) => setSlot(e.target.value)}
-            disabled={pending}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              id="handwerker-datum"
+              className="appointment-handwerker-datetime"
+              type="date"
+              value={slotDate}
+              min={minDate}
+              onChange={(e) => setSlotDate(e.target.value)}
+              disabled={pending}
+              style={{ flex: "1 1 auto" }}
+            />
+            <input
+              id="handwerker-uhrzeit"
+              className="appointment-handwerker-datetime"
+              type="time"
+              value={slotTime}
+              min={effectiveMinTime}
+              step={300}
+              onChange={(e) => setSlotTime(e.target.value)}
+              disabled={pending}
+              style={{ flex: "0 0 auto", width: 110 }}
+            />
+          </div>
           {preview ? (
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>
               Vorschau: {preview}
