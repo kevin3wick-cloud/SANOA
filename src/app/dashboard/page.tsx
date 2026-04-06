@@ -51,8 +51,6 @@ export default async function DashboardPage() {
     redirect("/admin");
   }
 
-  const twoDaysAgo = new Date(Date.now() - MS_TWO_DAYS);
-
   const [open, inProgress, done, actionTicketsRaw] = await Promise.all([
     db.ticket.count({ where: { status: TicketStatus.OPEN } }),
     db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS } }),
