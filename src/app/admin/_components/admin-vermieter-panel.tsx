@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, LogOut, UserPlus } from "lucide-react";
+import { Trash2, LogOut, UserPlus, KeyRound, X } from "lucide-react";
 
 type UserRow = {
   id: string;
@@ -14,6 +14,100 @@ type UserRow = {
 type Props = {
   currentUserId: string;
 };
+
+function ResetPasswordInline({ userId, name }: { userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFeedback(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/vermieter/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, newPassword }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setFeedback({ type: "err", msg: data.error ?? "Fehler beim Zurücksetzen." });
+      } else {
+        setFeedback({ type: "ok", msg: "Passwort wurde gesetzt." });
+        setNewPassword("");
+        setOpen(false);
+      }
+    } catch {
+      setFeedback({ type: "err", msg: "Netzwerkfehler." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => { setOpen(true); setFeedback(null); }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            fontSize: 12,
+            color: "var(--color-muted, #6b7280)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <KeyRound size={12} strokeWidth={1.75} aria-hidden />
+          Passwort zurücksetzen
+        </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}
+          >
+            <input
+              type="password"
+              placeholder={`Neues Passwort für ${name}`}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={6}
+              autoFocus
+              style={{ flex: 1, minWidth: 180, fontSize: 13, padding: "5px 10px" }}
+            />
+            <button type="submit" disabled={loading} style={{ fontSize: 13, padding: "5px 12px" }}>
+              {loading ? "…" : "Setzen"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setNewPassword(""); setFeedback(null); }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "inline-flex" }}
+            >
+              <X size={14} strokeWidth={1.75} aria-hidden />
+            </button>
+          </form>
+          {feedback && (
+            <p style={{
+              margin: 0,
+              fontSize: 12,
+              color: feedback.type === "err" ? "var(--color-danger, #e53e3e)" : "var(--color-success, #38a169)",
+            }}>
+              {feedback.msg}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminVermieterPanel({ currentUserId }: Props) {
   const router = useRouter();
@@ -138,13 +232,11 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
             </button>
           </form>
           {feedback && (
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13,
-                color: feedback.type === "err" ? "var(--color-danger, #e53e3e)" : "var(--color-success, #38a169)",
-              }}
-            >
+            <p style={{
+              margin: 0,
+              fontSize: 13,
+              color: feedback.type === "err" ? "var(--color-danger, #e53e3e)" : "var(--color-success, #38a169)",
+            }}>
               {feedback.msg}
             </p>
           )}
@@ -160,44 +252,45 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
           ) : vermieterOnly.length === 0 ? (
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>Noch keine Vermieter angelegt.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {vermieterOnly.map((u) => (
                 <div
                   key={u.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 14px",
+                    padding: "12px 14px",
                     background: "var(--color-surface-2, #f9fafb)",
                     borderRadius: 8,
                     border: "1px solid var(--color-border, #e5e7eb)",
                   }}
                 >
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{u.name}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--color-muted, #6b7280)" }}>
-                      {u.email}
-                    </p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{u.name}</p>
+                      <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--color-muted, #6b7280)" }}>
+                        {u.email}
+                      </p>
+                      <ResetPasswordInline userId={u.id} name={u.name} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void removeVermieter(u.id, u.name)}
+                      disabled={u.id === currentUserId}
+                      title="Vermieter löschen"
+                      style={{
+                        background: "none",
+                        border: "1px solid var(--color-border, #e5e7eb)",
+                        borderRadius: 6,
+                        padding: "5px 8px",
+                        cursor: u.id === currentUserId ? "not-allowed" : "pointer",
+                        color: u.id === currentUserId ? "var(--color-muted, #9ca3af)" : "var(--color-danger, #e53e3e)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Trash2 size={15} strokeWidth={1.75} aria-hidden />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void removeVermieter(u.id, u.name)}
-                    disabled={u.id === currentUserId}
-                    title="Vermieter löschen"
-                    style={{
-                      background: "none",
-                      border: "1px solid var(--color-border, #e5e7eb)",
-                      borderRadius: 6,
-                      padding: "5px 8px",
-                      cursor: u.id === currentUserId ? "not-allowed" : "pointer",
-                      color: u.id === currentUserId ? "var(--color-muted, #9ca3af)" : "var(--color-danger, #e53e3e)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Trash2 size={15} strokeWidth={1.75} aria-hidden />
-                  </button>
                 </div>
               ))}
             </div>
