@@ -1,9 +1,23 @@
 "use client";
 
-import { Bell, Building2, UserRound } from "lucide-react";
+import { Bell, Building2, LogOut, UserRound } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useRouter } from "next/navigation";
 
-export function Topbar() {
+type TopbarProps = {
+  userName: string;
+  userEmail: string;
+};
+
+export function Topbar({ userName, userEmail }: TopbarProps) {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <header className="topbar">
       <div className="topbar-lead">
@@ -24,8 +38,17 @@ export function Topbar() {
           <span className="topbar-user-avatar" aria-hidden>
             <UserRound size={18} strokeWidth={1.75} />
           </span>
-          <span className="topbar-user-email muted">hausverwaltung@example.de</span>
+          <span className="topbar-user-email muted">{userEmail || userName}</span>
         </div>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Abmelden"
+          onClick={handleLogout}
+          title="Abmelden"
+        >
+          <LogOut size={18} strokeWidth={1.75} />
+        </button>
       </div>
     </header>
   );
