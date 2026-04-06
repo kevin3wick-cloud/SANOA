@@ -12,7 +12,7 @@ export async function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar userRole={user?.role} />
       <main>
         <Topbar userName={user?.name ?? ""} userEmail={user?.email ?? ""} />
         <div className="content">{children}</div>

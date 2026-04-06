@@ -15,6 +15,90 @@ type SettingsPanelsProps = {
   currentUserEmail: string;
 };
 
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFeedback(null);
+    if (newPassword !== confirmPassword) {
+      setFeedback({ type: "err", msg: "Neues Passwort und Bestätigung stimmen nicht überein." });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setFeedback({ type: "err", msg: data.error ?? "Fehler beim Ändern des Passworts." });
+      } else {
+        setFeedback({ type: "ok", msg: "Passwort wurde erfolgreich geändert." });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch {
+      setFeedback({ type: "err", msg: "Netzwerkfehler. Bitte erneut versuchen." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card stack">
+      <h3>Passwort ändern</h3>
+      <form className="stack" onSubmit={handleSubmit}>
+        <input
+          type="password"
+          placeholder="Aktuelles Passwort"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Neues Passwort (min. 6 Zeichen)"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          minLength={6}
+        />
+        <input
+          type="password"
+          placeholder="Neues Passwort bestätigen"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={6}
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? "Wird gespeichert…" : "Passwort speichern"}
+        </button>
+      </form>
+      {feedback && (
+        <p
+          className="muted"
+          style={{
+            margin: "4px 0 0",
+            color: feedback.type === "err" ? "var(--color-danger, #e53e3e)" : "var(--color-success, #38a169)",
+            fontSize: 13,
+          }}
+        >
+          {feedback.msg}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPanels({ currentUserRole, currentUserName, currentUserEmail }: SettingsPanelsProps) {
   const isAdmin = currentUserRole === "ADMIN";
 
@@ -93,6 +177,8 @@ export function SettingsPanels({ currentUserRole, currentUserName, currentUserEm
           Rolle: {currentUserRole === "ADMIN" ? "Administrator" : "Vermieter"}
         </p>
       </div>
+
+      <ChangePasswordForm />
 
       {isAdmin && (
         <div className="card">

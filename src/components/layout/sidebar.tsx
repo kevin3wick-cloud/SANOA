@@ -38,7 +38,11 @@ function isNavActive(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  userRole?: string;
+};
+
+export function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
   const [tenantUnreadCount, setTenantUnreadCount] = useState(0);
 
@@ -61,6 +65,11 @@ export function Sidebar() {
     };
   }, [pathname]);
 
+  const isAdmin = userRole === "ADMIN";
+  const visibleNavItems = isAdmin
+    ? navItems.filter((item) => item.href === "/einstellungen")
+    : navItems;
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -69,11 +78,11 @@ export function Sidebar() {
         </div>
         <div>
           <h2 className="sidebar-title">Sanoa</h2>
-          <p className="sidebar-sub">Vermieter</p>
+          <p className="sidebar-sub">{isAdmin ? "Admin" : "Vermieter"}</p>
         </div>
       </div>
       <nav className="sidebar-nav" aria-label="Hauptnavigation">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const active = isNavActive(item.href, pathname);
           const showChatDot = item.href === "/tickets" && tenantUnreadCount > 0;

@@ -4,9 +4,79 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppointmentProposalStatus } from "@prisma/client";
 import { formatDate } from "@/lib/format";
+import { CalendarPlus } from "lucide-react";
+
+function generateICS(message: string, ticketTitle: string, respondedAt: string | null): string {
+  const now = new Date();
+  const eventDate = respondedAt ? new Date(respondedAt) : now;
+  // Use the next occurrence of the date as the event day (fallback: +1 day from confirmation)
+  const start = eventDate;
+  const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
+
+  function pad(n: number) {
+    return String(n).padStart(2, "0");
+  }
+  function toICSDate(d: Date) {
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+  const stamp = toICSDate(now);
+  const uid = `sanoa-${Date.now()}@sanoa.tech`;
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Sanoa//Vermieter-Portal//DE",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${stamp}Z`,
+    `DTSTART:${toICSDate(start)}`,
+    `DTEND:${toICSDate(end)}`,
+    `SUMMARY:Handwerker-Termin: ${ticketTitle}`,
+    `DESCRIPTION:${message.replace(/\n/g, "\\n")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+function AddToCalendarButton({
+  message,
+  ticketTitle,
+  respondedAt,
+}: {
+  message: string;
+  ticketTitle: string;
+  respondedAt: string | null;
+}) {
+  function handleClick() {
+    const ics = generateICS(message, ticketTitle, respondedAt);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "handwerker-termin.ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px" }}
+    >
+      <CalendarPlus size={13} strokeWidth={1.75} aria-hidden />
+      Zum Kalender hinzufügen
+    </button>
+  );
+}
 
 type Props = {
   ticketId: string;
+  ticketTitle: string;
   pendingProposal: {
     id: string;
     message: string;
@@ -30,6 +100,7 @@ const statusLabel: Record<AppointmentProposalStatus, string> = {
 
 export function MieterAppointmentPanel({
   ticketId,
+  ticketTitle,
   pendingProposal,
   history
 }: Props) {
@@ -104,8 +175,20 @@ export function MieterAppointmentPanel({
             {history
               .filter((h) => h.status !== "PENDING")
               .map((h) => (
-                <li key={h.id} style={{ marginBottom: 6 }}>
-                  {statusLabel[h.status]}: {h.message}
+                <li key={h.id} style={{ marginBottom: 8 }}>
+                  <span style={{ fontWeight: h.status === "CONFIRMED" ? 600 : undefined }}>
+                    {statusLabel[h.status]}:
+                  </span>{" "}
+                  {h.message}
+                  {h.status === "CONFIRMED" && (
+                    <div style={{ marginTop: 4 }}>
+                      <AddToCalendarButton
+                        message={h.message}
+                        ticketTitle={ticketTitle}
+                        respondedAt={h.respondedAt}
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
           </ul>

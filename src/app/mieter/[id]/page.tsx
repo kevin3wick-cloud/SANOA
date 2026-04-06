@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
+import { MieterResetPasswordForm } from "./_components/mieter-reset-password-form";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
@@ -21,7 +22,8 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
       },
       documents: {
         orderBy: { createdAt: "desc" }
-      }
+      },
+      user: true
     }
   });
 
@@ -58,6 +60,14 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
           leaseEndIso={tenant.leaseEnd?.toISOString() ?? null}
           isArchived={Boolean(tenant.archivedAt)}
         />
+
+        <div className="card stack">
+          <h3 style={{ marginTop: 0 }}>App-Zugang</h3>
+          <MieterResetPasswordForm
+            tenantId={tenant.id}
+            hasAppAccess={Boolean(tenant.user)}
+          />
+        </div>
 
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Tickets</h3>

@@ -137,6 +137,7 @@ export default async function MieterTicketDetailPage({ params }: PageProps) {
 
           <MieterAppointmentPanel
             ticketId={ticket.id}
+            ticketTitle={ticket.title}
             pendingProposal={
               pendingProposalRow
                 ? {
