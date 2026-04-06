@@ -5,6 +5,7 @@ import { TicketCategory, TicketStatus } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { TicketActions } from "@/components/tickets/ticket-actions";
 import { TicketAppointmentLandlord } from "@/components/tickets/ticket-appointment-landlord";
+import { TicketAssign } from "@/components/tickets/ticket-assign";
 import { TicketTenantChat } from "@/components/tickets/ticket-tenant-chat";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
@@ -29,20 +30,22 @@ function getPriority(ticket: { category: TicketCategory; status: TicketStatus })
 export default async function TicketDetailPage({ params }: TicketDetailProps) {
   const { id } = await params;
 
-  const ticket = await db.ticket.findUnique({
-    where: { id },
-    include: {
-      tenant: true,
-      notes: {
-        orderBy: {
-          createdAt: "asc"
-        }
+  const [ticket, teamMembers] = await Promise.all([
+    db.ticket.findUnique({
+      where: { id },
+      include: {
+        tenant: true,
+        assignedTo: { select: { id: true, name: true } },
+        notes: { orderBy: { createdAt: "asc" } },
+        appointmentProposals: { orderBy: { createdAt: "desc" } },
       },
-      appointmentProposals: {
-        orderBy: { createdAt: "desc" }
-      }
-    }
-  });
+    }),
+    db.user.findMany({
+      where: { role: "LANDLORD" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   if (!ticket) {
     notFound();
@@ -176,7 +179,15 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
             </ul>
           </div>
         </div>
-        <TicketActions ticketId={ticket.id} currentStatus={ticket.status} />
+        <div className="stack">
+          <TicketActions ticketId={ticket.id} currentStatus={ticket.status} />
+          <TicketAssign
+            ticketId={ticket.id}
+            assignedToId={ticket.assignedTo?.id ?? null}
+            assignedToName={ticket.assignedTo?.name ?? null}
+            teamMembers={teamMembers}
+          />
+        </div>
       </div>
     </AppShell>
   );

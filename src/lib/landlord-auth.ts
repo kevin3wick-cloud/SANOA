@@ -68,6 +68,12 @@ export async function requireAdminSession(): Promise<User> {
   return user;
 }
 
+export async function requireOrgAdminSession(): Promise<User> {
+  const user = await getLandlordSessionUser();
+  if (!user || user.role !== "LANDLORD" || user.orgRole !== "ORG_ADMIN") redirect("/login");
+  return user;
+}
+
 export function landlordSessionCookieOptions() {
   return {
     httpOnly: true,

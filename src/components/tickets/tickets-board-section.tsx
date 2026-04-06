@@ -178,6 +178,11 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
               </th>
               <th>
                 <div className="tickets-th-stack tickets-th-stack-static">
+                  <span>Zuständig</span>
+                </div>
+              </th>
+              <th>
+                <div className="tickets-th-stack tickets-th-stack-static">
                   <span>Chat</span>
                 </div>
               </th>
@@ -210,7 +215,7 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="muted tickets-filter-empty-cell">
+                <td colSpan={8} className="muted tickets-filter-empty-cell">
                   {filtersActive ? "Keine Treffer für diese Filter." : "Keine Tickets."}
                 </td>
               </tr>
@@ -235,6 +240,23 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
                   <td>{ticket.tenant.name}</td>
                   <td>{ticket.tenant.apartment}</td>
                   <td>{formatCategory(ticket.category)}</td>
+                  <td>
+                    {ticket.assignedTo ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span style={{
+                          width: 22, height: 22, borderRadius: "50%",
+                          background: "var(--accent, #2563eb)", color: "#fff",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 11, fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {ticket.assignedTo.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: 13 }}>{ticket.assignedTo.name}</span>
+                      </span>
+                    ) : (
+                      <span className="muted" style={{ fontSize: 13 }}>—</span>
+                    )}
+                  </td>
                   <td>
                     {ticket.unreadFromTenant ? (
                       <span className="chat-unread-dot-wrap" aria-label="Ungelesene Mieter-Nachricht">

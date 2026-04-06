@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   Settings2,
   Ticket,
-  Users
+  Users,
+  UsersRound
 } from "lucide-react";
 
 const navItems = [
@@ -39,9 +40,10 @@ function isNavActive(href: string, pathname: string) {
 
 type SidebarProps = {
   userRole?: string;
+  orgRole?: string;
 };
 
-export function Sidebar({ userRole }: SidebarProps) {
+export function Sidebar({ userRole, orgRole }: SidebarProps) {
   const pathname = usePathname();
   const [tenantUnreadCount, setTenantUnreadCount] = useState(0);
 
@@ -65,9 +67,14 @@ export function Sidebar({ userRole }: SidebarProps) {
   }, [pathname]);
 
   const isAdmin = userRole === "ADMIN";
+  const isOrgAdmin = orgRole === "ORG_ADMIN";
+
   const visibleNavItems = isAdmin
     ? navItems.filter((item) => item.href === "/einstellungen")
-    : navItems;
+    : [
+        ...navItems,
+        ...(isOrgAdmin ? [{ href: "/team", label: "Team", icon: UsersRound }] : []),
+      ];
 
   return (
     <aside className="sidebar">

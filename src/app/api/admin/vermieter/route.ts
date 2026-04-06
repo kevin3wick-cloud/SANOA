@@ -6,6 +6,7 @@ type Body = {
   name?: string;
   email?: string;
   password?: string;
+  isOrgAdmin?: boolean;
 };
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
   const name = body.name?.trim();
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
+  const isOrgAdmin = body.isOrgAdmin === true;
 
   if (!name || !email) {
     return NextResponse.json(
@@ -47,7 +49,13 @@ export async function POST(request: NextRequest) {
   }
 
   const user = await db.user.create({
-    data: { name, email, password, role: "LANDLORD" },
+    data: {
+      name,
+      email,
+      password,
+      role: "LANDLORD",
+      orgRole: isOrgAdmin ? "ORG_ADMIN" : "ORG_USER",
+    },
   });
 
   return NextResponse.json({ id: user.id }, { status: 201 });
@@ -62,7 +70,7 @@ export async function GET() {
   const users = await db.user.findMany({
     where: { role: { in: ["LANDLORD", "ADMIN"] } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, orgRole: true, createdAt: true },
   });
 
   return NextResponse.json({ users });

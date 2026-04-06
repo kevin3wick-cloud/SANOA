@@ -13,6 +13,9 @@ const chatNotesInclude = {
   },
   appointmentProposals: {
     select: { status: true, createdAt: true, respondedAt: true }
+  },
+  assignedTo: {
+    select: { id: true, name: true }
   }
 } satisfies Prisma.TicketInclude;
 
@@ -21,6 +24,7 @@ export type TicketBoardInclude = typeof chatNotesInclude;
 export type TicketWithTenantAndUnread = Ticket & {
   tenant: Tenant;
   unreadFromTenant: boolean;
+  assignedTo: { id: string; name: string } | null;
 };
 
 export function annotateTicketsForLandlordBoard<
@@ -35,7 +39,7 @@ export function annotateTicketsForLandlordBoard<
   }
 >(rows: T[]): TicketWithTenantAndUnread[] {
   return rows.map((row) => {
-    const { notes, appointmentProposals, ...rest } = row;
+    const { notes, appointmentProposals, assignedTo, ...rest } = row as T & { assignedTo?: { id: string; name: string } | null };
     const unreadFromTenant = hasUnreadFromTenantForLandlord(
       {
         createdAt: row.createdAt,
@@ -49,7 +53,7 @@ export function annotateTicketsForLandlordBoard<
       },
       appointmentProposals
     );
-    return { ...rest, unreadFromTenant };
+    return { ...rest, unreadFromTenant, assignedTo: assignedTo ?? null };
   });
 }
 

@@ -2,18 +2,52 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, LogOut, UserPlus, KeyRound, X } from "lucide-react";
+import { Trash2, LogOut, UserPlus, KeyRound, X, ShieldCheck, User, Eye } from "lucide-react";
+
+type OrgRole = "ORG_ADMIN" | "ORG_USER" | "ORG_GUEST";
 
 type UserRow = {
   id: string;
   name: string;
   email: string;
   role: string;
+  orgRole: OrgRole;
 };
 
 type Props = {
   currentUserId: string;
 };
+
+const ORG_ROLE_LABELS: Record<OrgRole, string> = {
+  ORG_ADMIN: "Admin",
+  ORG_USER: "Benutzer",
+  ORG_GUEST: "Gast",
+};
+
+const ORG_ROLE_COLORS: Record<OrgRole, string> = {
+  ORG_ADMIN: "#7c3aed",
+  ORG_USER: "#2563eb",
+  ORG_GUEST: "#6b7280",
+};
+
+function OrgRoleBadge({ orgRole }: { orgRole: OrgRole }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontSize: 11,
+        fontWeight: 600,
+        padding: "2px 8px",
+        borderRadius: 12,
+        background: ORG_ROLE_COLORS[orgRole] + "18",
+        color: ORG_ROLE_COLORS[orgRole],
+        border: `1px solid ${ORG_ROLE_COLORS[orgRole]}40`,
+      }}
+    >
+      {ORG_ROLE_LABELS[orgRole]}
+    </span>
+  );
+}
 
 function ResetPasswordInline({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
@@ -116,6 +150,7 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newIsOrgAdmin, setNewIsOrgAdmin] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
@@ -142,17 +177,26 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
       const res = await fetch("/api/admin/vermieter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName, email: newEmail, password: newPassword }),
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          password: newPassword,
+          isOrgAdmin: newIsOrgAdmin,
+        }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         setFeedback({ type: "err", msg: data.error ?? "Fehler beim Erstellen." });
         return;
       }
-      setFeedback({ type: "ok", msg: `${newEmail} wurde als Vermieter angelegt.` });
+      setFeedback({
+        type: "ok",
+        msg: `${newEmail} wurde als Vermieter angelegt (${newIsOrgAdmin ? "Admin" : "Benutzer"}).`,
+      });
       setNewName("");
       setNewEmail("");
       setNewPassword("");
+      setNewIsOrgAdmin(false);
       await loadVermieter();
     } catch {
       setFeedback({ type: "err", msg: "Netzwerkfehler." });
@@ -177,9 +221,12 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
 
   const vermieterOnly = vermieterList.filter((u) => u.role === "LANDLORD");
 
+  const orgRoleIcon = (r: OrgRole) =>
+    r === "ORG_ADMIN" ? <ShieldCheck size={12} /> : r === "ORG_GUEST" ? <Eye size={12} /> : <User size={12} />;
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg, #f5f6fa)", padding: "40px 16px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
@@ -227,6 +274,61 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
               required
               minLength={6}
             />
+
+            {/* Rolle-Auswahl */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                background: "var(--color-surface-2, #f9fafb)",
+                borderRadius: 8,
+                border: "1px solid var(--color-border, #e5e7eb)",
+              }}
+            >
+              <button
+                type="button"
+                role="switch"
+                aria-checked={newIsOrgAdmin}
+                onClick={() => setNewIsOrgAdmin((v) => !v)}
+                style={{
+                  width: 38,
+                  height: 22,
+                  borderRadius: 11,
+                  border: "none",
+                  background: newIsOrgAdmin ? "#7c3aed" : "#d1d5db",
+                  cursor: "pointer",
+                  position: "relative",
+                  flexShrink: 0,
+                  transition: "background 0.2s",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    left: newIsOrgAdmin ? 18 : 3,
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    background: "#fff",
+                    transition: "left 0.2s",
+                  }}
+                />
+              </button>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {newIsOrgAdmin ? "Verwaltungs-Admin" : "Benutzer"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-muted, #6b7280)", marginTop: 1 }}>
+                  {newIsOrgAdmin
+                    ? "Kann Mitarbeiter hinzufügen und verwalten"
+                    : "Kann Tickets bearbeiten, keine Benutzerverwaltung"}
+                </div>
+              </div>
+            </div>
+
             <button type="submit" disabled={addLoading}>
               {addLoading ? "Wird erstellt…" : "Vermieter anlegen"}
             </button>
@@ -265,7 +367,13 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{u.name}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{u.name}</p>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {orgRoleIcon(u.orgRole)}
+                          <OrgRoleBadge orgRole={u.orgRole} />
+                        </div>
+                      </div>
                       <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--color-muted, #6b7280)" }}>
                         {u.email}
                       </p>

@@ -13,6 +13,12 @@ enum UserRole {
   MIETER
 }
 
+enum OrgRole {
+  ORG_ADMIN
+  ORG_USER
+  ORG_GUEST
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -49,15 +55,17 @@ enum AppointmentProposalStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      UserRole @default(LANDLORD)
-  tenantId  String?  @unique
-  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  name            String
+  role            UserRole  @default(LANDLORD)
+  orgRole         OrgRole   @default(ORG_USER)
+  tenantId        String?   @unique
+  tenant          Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  assignedTickets Ticket[]  @relation("TicketAssignee")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Tenant {
@@ -87,6 +95,8 @@ model Ticket {
   isUrgent               Boolean                    @default(false)
   tenantId               String
   tenant                 Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedToId           String?
+  assignedTo             User?                      @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
   tenantLastSeenChatAt           DateTime?
