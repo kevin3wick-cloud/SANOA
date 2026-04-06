@@ -420,6 +420,17 @@ button.secondary-button:hover {
   min-height: 108px;
 }
 
+.stat-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
 .stat-card-inner {
   display: flex;
   align-items: flex-start;

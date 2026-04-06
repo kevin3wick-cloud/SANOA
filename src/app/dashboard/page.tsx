@@ -7,8 +7,6 @@ import {
   CircleCheck,
   CircleDot,
   LayoutGrid,
-  ListTodo,
-  Sparkles
 } from "lucide-react";
 import { TicketStatus } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
@@ -25,8 +23,6 @@ import {
 } from "@/lib/ticket-priority";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { redirect } from "next/navigation";
-
-const MS_TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
 
 function sortActionTickets<
   T extends {
@@ -57,155 +53,30 @@ export default async function DashboardPage() {
 
   const twoDaysAgo = new Date(Date.now() - MS_TWO_DAYS);
 
-  const [
-    open,
-    inProgress,
-    done,
-    staleOpenCount,
-    actionTicketsRaw,
-    newestOpen,
-    newestInProgress
-  ] = await Promise.all([
+  const [open, inProgress, done, actionTicketsRaw] = await Promise.all([
     db.ticket.count({ where: { status: TicketStatus.OPEN } }),
     db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS } }),
     db.ticket.count({ where: { status: TicketStatus.DONE } }),
-    db.ticket.count({
-      where: {
-        status: TicketStatus.OPEN,
-        createdAt: { lt: twoDaysAgo }
-      }
-    }),
     db.ticket.findMany({
-      where: {
-        status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] }
-      },
+      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] } },
       include: { tenant: true, ...chatNotesInclude }
-    }),
-    db.ticket.findFirst({
-      where: { status: TicketStatus.OPEN },
-      orderBy: { createdAt: "desc" }
-    }),
-    db.ticket.findFirst({
-      where: { status: TicketStatus.IN_PROGRESS },
-      orderBy: { createdAt: "desc" }
     })
   ]);
 
   const total = open + inProgress + done;
   const actionTicketsAnnotated = annotateTicketsForLandlordBoard(actionTicketsRaw);
-  const unreadTenantChatCount = actionTicketsAnnotated.filter((t) => t.unreadFromTenant)
-    .length;
   const actionTickets = sortActionTickets(actionTicketsAnnotated).slice(0, 8);
-  const nextTicketHref = newestOpen
-    ? `/tickets/${newestOpen.id}`
-    : newestInProgress
-      ? `/tickets/${newestInProgress.id}`
-      : "/tickets";
-
-  const hints: { id: string; text: string; variant: "info" | "warning" }[] = [];
-
-  if (open > 0) {
-    hints.push({
-      id: "open",
-      text:
-        open === 1
-          ? "1 Ticket wartet auf Bearbeitung."
-          : `${open} Tickets warten auf Bearbeitung.`,
-      variant: "info"
-    });
-  }
-
-  if (inProgress > 0) {
-    hints.push({
-      id: "progress",
-      text:
-        inProgress === 1
-          ? "1 Ticket ist in Bearbeitung."
-          : `${inProgress} Tickets sind in Bearbeitung.`,
-      variant: "info"
-    });
-  }
-
-  if (staleOpenCount > 0) {
-    hints.push({
-      id: "stale",
-      text:
-        staleOpenCount === 1
-          ? "1 Ticket ist seit mehr als 2 Tagen offen."
-          : `${staleOpenCount} Tickets sind seit mehr als 2 Tagen offen.`,
-      variant: "warning"
-    });
-  }
-
-  if (unreadTenantChatCount > 0) {
-    hints.push({
-      id: "tenant-chat",
-      text:
-        unreadTenantChatCount === 1
-          ? "1 Ticket mit neuer Mieter-Nachricht im Chat."
-          : `${unreadTenantChatCount} Tickets mit neuen Mieter-Nachrichten im Chat.`,
-      variant: "info"
-    });
-  }
-
-  if (hints.length === 0 && total === 0) {
-    hints.push({
-      id: "empty",
-      text: "Noch keine Tickets. Sobald Mieter melden, erscheinen sie hier.",
-      variant: "info"
-    });
-  }
 
   return (
     <AppShell>
       <div className="stack dashboard-stack">
-        <div className="dashboard-hero">
-          <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-lead muted">
-              Prioritäten erkennen und nächste Schritte sofort sehen.
-            </p>
-          </div>
-          <div className="dashboard-quick-actions">
-            <Link href={nextTicketHref} className="dashboard-cta dashboard-cta-primary">
-              <Sparkles size={18} strokeWidth={1.75} aria-hidden />
-              Neues Ticket ansehen
-              <ArrowRight size={16} strokeWidth={1.75} aria-hidden />
-            </Link>
-            <Link href="/tickets#tickets-offen" className="dashboard-cta dashboard-cta-secondary">
-              <ListTodo size={18} strokeWidth={1.75} aria-hidden />
-              Alle offenen Tickets
-            </Link>
-          </div>
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-lead muted">Übersicht aller Tickets.</p>
         </div>
 
-        {hints.length > 0 && (
-          <div className="card dashboard-hints-card">
-            <h2 className="dashboard-hints-title">Als Nächstes</h2>
-            <ul className="dashboard-hints-list">
-              {hints.map((hint) => (
-                <li
-                  key={hint.id}
-                  className={
-                    hint.variant === "warning"
-                      ? "dashboard-hint dashboard-hint-warning"
-                      : "dashboard-hint dashboard-hint-info"
-                  }
-                >
-                  {hint.variant === "warning" ? (
-                    <CircleAlert size={20} strokeWidth={1.75} aria-hidden />
-                  ) : (
-                    <CircleDot size={20} strokeWidth={1.75} aria-hidden />
-                  )}
-                  <span>{hint.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         <div className="grid grid-4">
-          <div className="card stat-card">
+          <Link href="/tickets" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-open">
                 <CircleAlert size={22} strokeWidth={1.75} aria-hidden />
@@ -215,8 +86,8 @@ export default async function DashboardPage() {
                 <p className="stat-value">{open}</p>
               </div>
             </div>
-          </div>
-          <div className="card stat-card">
+          </Link>
+          <Link href="/tickets" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-progress">
                 <CircleDot size={22} strokeWidth={1.75} aria-hidden />
@@ -226,8 +97,8 @@ export default async function DashboardPage() {
                 <p className="stat-value">{inProgress}</p>
               </div>
             </div>
-          </div>
-          <div className="card stat-card">
+          </Link>
+          <Link href="/archiv" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-done">
                 <CircleCheck size={22} strokeWidth={1.75} aria-hidden />
@@ -237,8 +108,8 @@ export default async function DashboardPage() {
                 <p className="stat-value">{done}</p>
               </div>
             </div>
-          </div>
-          <div className="card stat-card">
+          </Link>
+          <Link href="/tickets" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-total">
                 <LayoutGrid size={22} strokeWidth={1.75} aria-hidden />
@@ -248,7 +119,7 @@ export default async function DashboardPage() {
                 <p className="stat-value">{total}</p>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="card dashboard-queue-card">
