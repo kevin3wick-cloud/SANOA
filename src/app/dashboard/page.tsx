@@ -74,7 +74,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-4">
-          <Link href="/tickets" className="card stat-card stat-card-link">
+          <Link href="/tickets?filter=open" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-open">
                 <CircleAlert size={22} strokeWidth={1.75} aria-hidden />
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
               </div>
             </div>
           </Link>
-          <Link href="/tickets" className="card stat-card stat-card-link">
+          <Link href="/tickets?filter=progress" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-progress">
                 <CircleDot size={22} strokeWidth={1.75} aria-hidden />
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
               </div>
             </div>
           </Link>
-          <Link href="/tickets" className="card stat-card stat-card-link">
+          <Link href="/tickets?filter=all" className="card stat-card stat-card-link">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-total">
                 <LayoutGrid size={22} strokeWidth={1.75} aria-hidden />

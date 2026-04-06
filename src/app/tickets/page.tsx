@@ -16,58 +16,115 @@ const boardInclude = {
   ...chatNotesInclude
 } as const;
 
-export default async function TicketsPage() {
+type FilterMode = "open" | "progress" | "all";
+
+export default async function TicketsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   await archiveTenantsPastLeaseEnd();
 
-  const [openRaw, progressRaw, doneCount] = await Promise.all([
-    db.ticket.findMany({
-      where: { status: TicketStatus.OPEN },
-      include: boardInclude,
-      orderBy: { createdAt: "desc" }
-    }),
-    db.ticket.findMany({
-      where: { status: TicketStatus.IN_PROGRESS },
-      include: boardInclude,
-      orderBy: { createdAt: "desc" }
-    }),
-    db.ticket.count({ where: { status: TicketStatus.DONE } })
+  const params = await searchParams;
+  const filter = (params.filter ?? "") as FilterMode | "";
+
+  const showOpen = filter === "open" || filter === "" || filter === "all";
+  const showProgress = filter === "progress" || filter === "" || filter === "all";
+  const showDone = filter === "all";
+
+  const [openRaw, progressRaw, doneRaw] = await Promise.all([
+    showOpen
+      ? db.ticket.findMany({
+          where: { status: TicketStatus.OPEN },
+          include: boardInclude,
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    showProgress
+      ? db.ticket.findMany({
+          where: { status: TicketStatus.IN_PROGRESS },
+          include: boardInclude,
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    showDone
+      ? db.ticket.findMany({
+          where: { status: TicketStatus.DONE },
+          include: boardInclude,
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const openTickets = annotateTicketsForLandlordBoard(openRaw);
   const progressTickets = annotateTicketsForLandlordBoard(progressRaw);
+  const doneTickets = annotateTicketsForLandlordBoard(doneRaw);
+
+  const filterLabel =
+    filter === "open"
+      ? "Offene Tickets"
+      : filter === "progress"
+      ? "Tickets in Bearbeitung"
+      : filter === "all"
+      ? "Alle Tickets"
+      : "Aktive Tickets";
+
+  const filterTabs: { label: string; href: string; active: boolean }[] = [
+    { label: "Aktiv", href: "/tickets", active: filter === "" },
+    { label: "Offen", href: "/tickets?filter=open", active: filter === "open" },
+    { label: "In Bearbeitung", href: "/tickets?filter=progress", active: filter === "progress" },
+    { label: "Alle", href: "/tickets?filter=all", active: filter === "all" },
+  ];
 
   return (
     <AppShell>
       <div className="stack tickets-page">
         <div>
-          <h1 className="page-title">Tickets</h1>
-          <p className="page-lead muted">
-            Aktive Tickets nach Status – erledigte Tickets im{" "}
-            <Link href="/archiv" style={{ color: "var(--accent)" }}>Archiv</Link>.
-          </p>
+          <h1 className="page-title">{filterLabel}</h1>
+          <nav style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            {filterTabs.map((tab) => (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                style={{
+                  padding: "5px 14px",
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: tab.active ? 600 : 400,
+                  background: tab.active ? "var(--accent)" : "var(--card-bg)",
+                  color: tab.active ? "#fff" : "var(--fg)",
+                  border: "1px solid",
+                  borderColor: tab.active ? "var(--accent)" : "var(--border)",
+                  textDecoration: "none",
+                }}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        <TicketsBoardSection
-          id="tickets-offen"
-          title="Offen"
-          tone="open"
-          tickets={openTickets}
-        />
-        <TicketsBoardSection
-          title="In Bearbeitung"
-          tone="progress"
-          tickets={progressTickets}
-        />
-
-        {doneCount > 0 && (
-          <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
-            <span className="muted" style={{ fontSize: 14 }}>
-              {doneCount} erledigte{doneCount === 1 ? "s Ticket" : " Tickets"} im Archiv
-            </span>
-            <Link href="/archiv" style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600 }}>
-              Archiv öffnen →
-            </Link>
-          </div>
+        {showOpen && (
+          <TicketsBoardSection
+            id="tickets-offen"
+            title="Offen"
+            tone="open"
+            tickets={openTickets}
+          />
+        )}
+        {showProgress && (
+          <TicketsBoardSection
+            title="In Bearbeitung"
+            tone="progress"
+            tickets={progressTickets}
+          />
+        )}
+        {showDone && (
+          <TicketsBoardSection
+            title="Erledigt"
+            tone="done"
+            tickets={doneTickets}
+          />
         )}
       </div>
     </AppShell>
