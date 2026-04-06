@@ -1,6 +1,3 @@
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { TicketCategory } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { formatCategory } from "@/lib/format";
@@ -11,8 +8,7 @@ import { isTicketCategory } from "@/mieter-app/options";
 
 export const runtime = "nodejs";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tickets");
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024; // 4 MB before base64 encoding
 
 function isImageBuffer(buf: Buffer) {
   if (buf.length < 4) return false;
@@ -139,18 +135,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ext =
+  const mimeType =
     file.type === "image/png"
-      ? "png"
+      ? "image/png"
       : file.type === "image/webp"
-        ? "webp"
+        ? "image/webp"
         : file.type === "image/gif"
-          ? "gif"
-          : "jpg";
-  const stored = `${randomUUID()}.${ext}`;
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(UPLOAD_DIR, stored), buffer);
-  const imageUrl = `/uploads/tickets/${stored}`;
+          ? "image/gif"
+          : "image/jpeg";
+  const imageUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
 
   const cat = category as TicketCategory;
   const title = `${formatCategory(cat)} – ${location}`;

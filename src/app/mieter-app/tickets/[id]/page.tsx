@@ -8,6 +8,7 @@ import { formatCategory, formatDate, formatStatus, getStatusBadgeClassName } fro
 import { formatPriorityLabel, getTicketPriority } from "@/lib/ticket-priority";
 import { MieterNav } from "../../_components/mieter-nav";
 import { MieterAppointmentPanel } from "../../_components/mieter-appointment-panel";
+import { MieterCloseTicketForm } from "../../_components/mieter-close-ticket-form";
 import { MieterTicketChat } from "../../_components/mieter-ticket-chat";
 import { MieterTopBar } from "../../_components/mieter-top-bar";
 
@@ -126,6 +127,8 @@ export default async function MieterTicketDetailPage({ params }: PageProps) {
               <div className="ticket-image-placeholder">Kein Bild</div>
             )}
           </div>
+
+          <MieterCloseTicketForm ticketId={ticket.id} isDone={ticket.status === "DONE"} />
 
           <MieterTicketChat
             ticketId={ticket.id}
