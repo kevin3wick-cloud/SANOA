@@ -15,13 +15,13 @@ type TeamMember = {
 const ROLE_LABELS: Record<OrgRole, string> = {
   ORG_ADMIN: "Admin",
   ORG_USER: "Benutzer",
-  ORG_GUEST: "Gast (nur Lesen)",
+  ORG_GUEST: "Gast",
 };
 
 const ROLE_DESC: Record<OrgRole, string> = {
-  ORG_ADMIN: "Vollzugriff, kann Mitarbeiter verwalten",
-  ORG_USER: "Tickets bearbeiten, kein Benutzermanagement",
-  ORG_GUEST: "Nur Lesen – keine Änderungen möglich",
+  ORG_ADMIN: "Vollzugriff + Benutzerverwaltung",
+  ORG_USER: "Tickets bearbeiten",
+  ORG_GUEST: "Nur lesen",
 };
 
 const ROLE_COLOR: Record<OrgRole, string> = {
@@ -30,41 +30,44 @@ const ROLE_COLOR: Record<OrgRole, string> = {
   ORG_GUEST: "#6b7280",
 };
 
-function RoleBadge({ role }: { role: OrgRole }) {
+function Avatar({ name, color }: { name: string; color: string }) {
   return (
-    <span
-      style={{
-        display: "inline-block",
-        fontSize: 11,
-        fontWeight: 600,
-        padding: "2px 8px",
-        borderRadius: 12,
-        background: ROLE_COLOR[role] + "18",
-        color: ROLE_COLOR[role],
-        border: `1px solid ${ROLE_COLOR[role]}40`,
-      }}
-    >
-      {ROLE_LABELS[role]}
-    </span>
+    <div style={{
+      width: 36, height: 36, borderRadius: "50%",
+      background: color + "22", color,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 14, fontWeight: 700, flexShrink: 0,
+      border: `1.5px solid ${color}44`,
+    }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
   );
 }
 
-function RoleIcon({ role }: { role: OrgRole }) {
-  if (role === "ORG_ADMIN") return <ShieldCheck size={15} strokeWidth={1.75} color={ROLE_COLOR.ORG_ADMIN} />;
-  if (role === "ORG_GUEST") return <Eye size={15} strokeWidth={1.75} color={ROLE_COLOR.ORG_GUEST} />;
-  return <User size={15} strokeWidth={1.75} color={ROLE_COLOR.ORG_USER} />;
+function RolePill({ role }: { role: OrgRole }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+      background: ROLE_COLOR[role] + "15", color: ROLE_COLOR[role],
+      border: `1px solid ${ROLE_COLOR[role]}33`,
+    }}>
+      {role === "ORG_ADMIN" ? <ShieldCheck size={10} /> : role === "ORG_GUEST" ? <Eye size={10} /> : <User size={10} />}
+      {ROLE_LABELS[role]}
+    </span>
+  );
 }
 
 function ResetPasswordInline({ userId, name }: { userId: string; name: string }) {
   const [open, setOpen] = useState(false);
   const [pw, setPw] = useState("");
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setFeedback(null);
+    setMsg(null);
     try {
       const res = await fetch("/api/admin/vermieter/reset-password", {
         method: "POST",
@@ -72,21 +75,24 @@ function ResetPasswordInline({ userId, name }: { userId: string; name: string })
         body: JSON.stringify({ userId, newPassword: pw }),
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) setFeedback({ type: "err", msg: data.error ?? "Fehler." });
-      else { setFeedback({ type: "ok", msg: "Passwort gesetzt." }); setPw(""); setOpen(false); }
-    } catch { setFeedback({ type: "err", msg: "Netzwerkfehler." }); }
+      if (!res.ok) setMsg({ ok: false, text: data.error ?? "Fehler." });
+      else { setMsg({ ok: true, text: "Passwort gesetzt." }); setPw(""); setOpen(false); }
+    } catch { setMsg({ ok: false, text: "Netzwerkfehler." }); }
     finally { setLoading(false); }
   }
 
   if (!open) return (
-    <button type="button" onClick={() => setOpen(true)}
-      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6 }}>
-      <KeyRound size={12} strokeWidth={1.75} /> Passwort zurücksetzen
+    <button type="button" onClick={() => setOpen(true)} style={{
+      background: "none", border: "none", padding: 0, cursor: "pointer",
+      fontSize: 12, color: "var(--muted, #6b7280)",
+      display: "inline-flex", alignItems: "center", gap: 4,
+    }}>
+      <KeyRound size={11} strokeWidth={1.75} /> Passwort zurücksetzen
     </button>
   );
 
   return (
-    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
       <form onSubmit={submit} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <input type="password" placeholder={`Neues Passwort für ${name}`} value={pw}
           onChange={e => setPw(e.target.value)} required minLength={6} autoFocus
@@ -94,12 +100,12 @@ function ResetPasswordInline({ userId, name }: { userId: string; name: string })
         <button type="submit" disabled={loading} style={{ fontSize: 13, padding: "5px 12px" }}>
           {loading ? "…" : "Setzen"}
         </button>
-        <button type="button" onClick={() => { setOpen(false); setPw(""); setFeedback(null); }}
+        <button type="button" onClick={() => { setOpen(false); setPw(""); setMsg(null); }}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "inline-flex" }}>
           <X size={14} strokeWidth={1.75} />
         </button>
       </form>
-      {feedback && <p style={{ margin: 0, fontSize: 12, color: feedback.type === "err" ? "#e53e3e" : "#38a169" }}>{feedback.msg}</p>}
+      {msg && <p style={{ margin: 0, fontSize: 12, color: msg.ok ? "#16a34a" : "#dc2626" }}>{msg.text}</p>}
     </div>
   );
 }
@@ -108,14 +114,12 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-
-  // Add form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [orgRole, setOrgRole] = useState<OrgRole>("ORG_USER");
   const [addLoading, setAddLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => { void load(); }, []);
 
@@ -139,12 +143,12 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
         body: JSON.stringify({ name, email, password, orgRole }),
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) { setFeedback({ type: "err", msg: data.error ?? "Fehler." }); return; }
-      setFeedback({ type: "ok", msg: `${email} wurde als ${ROLE_LABELS[orgRole]} hinzugefügt.` });
+      if (!res.ok) { setFeedback({ ok: false, text: data.error ?? "Fehler." }); return; }
+      setFeedback({ ok: true, text: `${name} wurde als ${ROLE_LABELS[orgRole]} hinzugefügt.` });
       setName(""); setEmail(""); setPassword(""); setOrgRole("ORG_USER");
       setShowAdd(false);
       await load();
-    } catch { setFeedback({ type: "err", msg: "Netzwerkfehler." }); }
+    } catch { setFeedback({ ok: false, text: "Netzwerkfehler." }); }
     finally { setAddLoading(false); }
   }
 
@@ -158,39 +162,23 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
   }
 
   async function removeMember(id: string, memberName: string) {
-    if (!confirm(`"${memberName}" wirklich entfernen?`)) return;
+    if (!confirm(`"${memberName}" wirklich aus dem Team entfernen?`)) return;
     const res = await fetch(`/api/team?id=${id}`, { method: "DELETE" });
     if (res.ok) setMembers(prev => prev.filter(m => m.id !== id));
   }
 
   return (
     <div className="stack">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
         <div>
           <h1 className="page-title">Team</h1>
           <p className="page-lead muted">Mitarbeiter verwalten und Berechtigungen festlegen.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => { setShowAdd(v => !v); setFeedback(null); }}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, padding: "8px 14px" }}
-        >
+        <button type="button" onClick={() => { setShowAdd(v => !v); setFeedback(null); }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, padding: "8px 14px", flexShrink: 0 }}>
           <UserPlus size={15} strokeWidth={1.75} aria-hidden />
           Mitarbeiter hinzufügen
         </button>
-      </div>
-
-      {/* Rollen-Legende */}
-      <div className="card" style={{ display: "flex", gap: 20, flexWrap: "wrap", padding: "14px 18px" }}>
-        {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
-          <div key={r} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <RoleIcon role={r} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{ROLE_LABELS[r]}</div>
-              <div style={{ fontSize: 11, color: "#6b7280" }}>{ROLE_DESC[r]}</div>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Add form */}
@@ -204,30 +192,29 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             </div>
             <input type="password" placeholder="Passwort (min. 6 Zeichen)" value={password}
               onChange={e => setPassword(e.target.value)} required minLength={6} />
-
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Rolle</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--muted, #6b7280)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rolle</label>
+              <div style={{ display: "flex", gap: 8 }}>
                 {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
                   <label key={r} style={{
-                    display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
-                    borderRadius: 8, border: `2px solid ${orgRole === r ? ROLE_COLOR[r] : "var(--border, #e5e7eb)"}`,
-                    background: orgRole === r ? ROLE_COLOR[r] + "10" : "transparent",
-                    cursor: "pointer", fontSize: 13, fontWeight: orgRole === r ? 600 : 400,
+                    flex: 1, display: "flex", flexDirection: "column", gap: 3,
+                    padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+                    border: `2px solid ${orgRole === r ? ROLE_COLOR[r] : "var(--border, #e5e7eb)"}`,
+                    background: orgRole === r ? ROLE_COLOR[r] + "08" : "transparent",
+                    transition: "border-color 0.15s",
                   }}>
                     <input type="radio" name="orgRole" value={r} checked={orgRole === r}
                       onChange={() => setOrgRole(r)} style={{ display: "none" }} />
-                    <RoleIcon role={r} />
-                    {ROLE_LABELS[r]}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: orgRole === r ? ROLE_COLOR[r] : "inherit" }}>
+                      {ROLE_LABELS[r]}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--muted, #6b7280)" }}>{ROLE_DESC[r]}</span>
                   </label>
                 ))}
               </div>
             </div>
-
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" disabled={addLoading}>
-                {addLoading ? "Wird erstellt…" : "Hinzufügen"}
-              </button>
+              <button type="submit" disabled={addLoading}>{addLoading ? "Wird erstellt…" : "Hinzufügen"}</button>
               <button type="button" onClick={() => setShowAdd(false)}
                 style={{ background: "transparent", border: "1px solid var(--border, #e5e7eb)" }}>
                 Abbrechen
@@ -235,91 +222,77 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             </div>
           </form>
           {feedback && (
-            <p style={{ margin: 0, fontSize: 13, color: feedback.type === "err" ? "#e53e3e" : "#38a169" }}>
-              {feedback.msg}
-            </p>
+            <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#16a34a" : "#dc2626" }}>{feedback.text}</p>
           )}
         </div>
       )}
 
-      {/* Members list */}
-      <div className="card stack">
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-          Mitarbeiter ({members.length})
-        </h2>
-        {loading ? (
-          <p className="muted" style={{ margin: 0, fontSize: 13 }}>Wird geladen…</p>
-        ) : members.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: 13 }}>Noch keine Mitarbeiter.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {members.map(m => (
-              <div key={m.id} style={{
-                padding: "12px 14px",
-                background: "var(--color-surface-2, #f9fafb)",
-                borderRadius: 8,
-                border: "1px solid var(--color-border, #e5e7eb)",
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <RoleIcon role={m.orgRole} />
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span>
-                      <RoleBadge role={m.orgRole} />
-                      {m.id === currentUserId && (
-                        <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>(Sie)</span>
-                      )}
-                    </div>
-                    <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6b7280" }}>{m.email}</p>
+      {feedback && !showAdd && (
+        <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#16a34a" : "#dc2626" }}>{feedback.text}</p>
+      )}
 
-                    {m.id !== currentUserId && (
-                      <>
-                        {/* Role change */}
-                        <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
-                            <button key={r} type="button"
-                              onClick={() => void changeRole(m.id, r)}
-                              disabled={m.orgRole === r}
-                              style={{
-                                fontSize: 11, padding: "3px 8px", borderRadius: 8,
-                                border: `1px solid ${m.orgRole === r ? ROLE_COLOR[r] : "var(--border, #e5e7eb)"}`,
-                                background: m.orgRole === r ? ROLE_COLOR[r] + "18" : "transparent",
-                                color: m.orgRole === r ? ROLE_COLOR[r] : "#6b7280",
-                                cursor: m.orgRole === r ? "default" : "pointer",
-                                fontWeight: m.orgRole === r ? 600 : 400,
-                              }}>
-                              {ROLE_LABELS[r]}
-                            </button>
-                          ))}
-                        </div>
-                        <ResetPasswordInline userId={m.id} name={m.name} />
-                      </>
+      {/* Members list */}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border, #e5e7eb)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Mitarbeiter</h2>
+          <span className="muted" style={{ fontSize: 13 }}>{members.length} Personen</span>
+        </div>
+
+        {loading ? (
+          <p className="muted" style={{ margin: 0, fontSize: 13, padding: "20px" }}>Wird geladen…</p>
+        ) : members.length === 0 ? (
+          <p className="muted" style={{ margin: 0, fontSize: 13, padding: "20px" }}>Noch keine Mitarbeiter.</p>
+        ) : (
+          <div>
+            {members.map((m, idx) => (
+              <div key={m.id} style={{
+                padding: "14px 20px",
+                borderBottom: idx < members.length - 1 ? "1px solid var(--border, #e5e7eb)" : "none",
+                display: "flex", alignItems: "flex-start", gap: 12,
+              }}>
+                <Avatar name={m.name} color={ROLE_COLOR[m.orgRole]} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span>
+                    <RolePill role={m.orgRole} />
+                    {m.id === currentUserId && (
+                      <span style={{ fontSize: 11, color: "var(--muted, #6b7280)", fontStyle: "italic" }}>Sie</span>
                     )}
                   </div>
-
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted, #6b7280)" }}>{m.email}</p>
                   {m.id !== currentUserId && (
-                    <button type="button" onClick={() => void removeMember(m.id, m.name)}
-                      title="Mitarbeiter entfernen"
-                      style={{
-                        background: "none", border: "1px solid var(--color-border, #e5e7eb)",
-                        borderRadius: 6, padding: "5px 8px", cursor: "pointer",
-                        color: "#e53e3e", display: "inline-flex", alignItems: "center", flexShrink: 0,
-                      }}>
-                      <Trash2 size={15} strokeWidth={1.75} aria-hidden />
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                      {/* Role dropdown */}
+                      <select value={m.orgRole} onChange={e => void changeRole(m.id, e.target.value as OrgRole)}
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border, #e5e7eb)", background: "var(--card-bg, #fff)", color: "inherit", cursor: "pointer" }}>
+                        {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
+                          <option key={r} value={r}>{ROLE_LABELS[r]} – {ROLE_DESC[r]}</option>
+                        ))}
+                      </select>
+                      <ResetPasswordInline userId={m.id} name={m.name} />
+                    </div>
                   )}
                 </div>
+                {m.id !== currentUserId && (
+                  <button type="button" onClick={() => void removeMember(m.id, m.name)}
+                    title="Mitarbeiter entfernen"
+                    style={{
+                      background: "none", border: "1px solid transparent", borderRadius: 6,
+                      padding: "5px 7px", cursor: "pointer", color: "var(--muted, #9ca3af)",
+                      display: "inline-flex", alignItems: "center", flexShrink: 0,
+                      transition: "color 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#fca5a5"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--muted, #9ca3af)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "transparent"; }}
+                  >
+                    <Trash2 size={14} strokeWidth={1.75} aria-hidden />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {!showAdd && feedback && (
-        <p style={{ margin: 0, fontSize: 13, color: feedback.type === "err" ? "#e53e3e" : "#38a169" }}>
-          {feedback.msg}
-        </p>
-      )}
     </div>
   );
 }

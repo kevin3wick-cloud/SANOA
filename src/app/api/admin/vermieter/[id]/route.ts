@@ -28,6 +28,7 @@ export async function PATCH(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (db.user as any).update({ where: { id }, data: { orgRole } });
   return NextResponse.json({ ok: true });
 }

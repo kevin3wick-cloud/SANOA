@@ -5,13 +5,17 @@ import { AppShell } from "@/components/layout/app-shell";
 import { TenantCreateForm } from "@/components/mieter/tenant-create-form";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
+import { tenantOrgFilter } from "@/lib/org-filter";
 import { archiveTenantsPastLeaseEnd } from "@/lib/tenant-lease";
 
 export default async function MieterPage() {
   await archiveTenantsPastLeaseEnd();
+  const user = await getLandlordSessionUser();
 
-  const tenants = await db.tenant.findMany({
-    where: { archivedAt: null },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tenants = await (db.tenant as any).findMany({
+    where: { archivedAt: null, ...tenantOrgFilter(user as any) },
     include: {
       _count: {
         select: { tickets: true }

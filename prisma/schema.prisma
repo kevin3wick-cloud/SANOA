@@ -61,6 +61,7 @@ model User {
   name            String
   role            UserRole  @default(LANDLORD)
   orgRole         OrgRole   @default(ORG_USER)
+  orgId           String?
   tenantId        String?   @unique
   tenant          Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   assignedTickets Ticket[]  @relation("TicketAssignee")
@@ -77,6 +78,7 @@ model Tenant {
   leaseStart  DateTime?
   leaseEnd    DateTime?
   archivedAt  DateTime?
+  orgId       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   tickets     Ticket[]

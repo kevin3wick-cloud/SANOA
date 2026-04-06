@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { db } from "@/lib/db";
 
@@ -48,13 +49,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const user = await db.user.create({
+  // Every new vermieter gets their own unique orgId (organization isolation)
+  const orgId = randomUUID();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = await (db.user as any).create({
     data: {
       name,
       email,
       password,
       role: "LANDLORD",
       orgRole: isOrgAdmin ? "ORG_ADMIN" : "ORG_USER",
+      orgId,
     },
   });
 
@@ -70,7 +76,8 @@ export async function GET() {
   const users = await db.user.findMany({
     where: { role: { in: ["LANDLORD", "ADMIN"] } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, email: true, role: true, orgRole: true, createdAt: true },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    select: { id: true, name: true, email: true, role: true, orgRole: true, orgId: true, createdAt: true } as any,
   });
 
   return NextResponse.json({ users });

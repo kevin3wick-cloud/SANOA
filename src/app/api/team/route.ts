@@ -11,19 +11,24 @@ type Body = {
   orgRole?: OrgRole;
 };
 
-// GET - list all team members (org admin only)
+// GET - list all team members in the same org
 export async function GET() {
   const currentUser = await getLandlordSessionUser();
   if (
     !currentUser ||
     currentUser.role !== "LANDLORD" ||
-    currentUser.orgRole !== "ORG_ADMIN"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (currentUser as any).orgRole !== "ORG_ADMIN"
   ) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 403 });
   }
 
-  const users = await db.user.findMany({
-    where: { role: "LANDLORD" },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentOrgId = (currentUser as any).orgId ?? null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const users = await (db.user as any).findMany({
+    where: { role: "LANDLORD", orgId: currentOrgId },
     orderBy: { createdAt: "asc" },
     select: { id: true, name: true, email: true, orgRole: true, createdAt: true },
   });
@@ -31,16 +36,20 @@ export async function GET() {
   return NextResponse.json({ users });
 }
 
-// POST - create new team member (org admin only)
+// POST - create new team member in the same org
 export async function POST(request: NextRequest) {
   const currentUser = await getLandlordSessionUser();
   if (
     !currentUser ||
     currentUser.role !== "LANDLORD" ||
-    currentUser.orgRole !== "ORG_ADMIN"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (currentUser as any).orgRole !== "ORG_ADMIN"
   ) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 403 });
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentOrgId = (currentUser as any).orgId ?? null;
 
   const body = (await request.json()) as Body;
   const name = body.name?.trim();
@@ -66,35 +75,39 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Diese E-Mail ist bereits vergeben." }, { status: 409 });
   }
 
-  const user = await db.user.create({
-    data: { name, email, password, role: "LANDLORD", orgRole },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = await (db.user as any).create({
+    data: { name, email, password, role: "LANDLORD", orgRole, orgId: currentOrgId },
   });
 
   return NextResponse.json({ id: user.id }, { status: 201 });
 }
 
-// DELETE - remove team member (org admin only, cannot delete self)
+// DELETE - remove team member (org admin only, same org, cannot delete self)
 export async function DELETE(request: NextRequest) {
   const currentUser = await getLandlordSessionUser();
   if (
     !currentUser ||
     currentUser.role !== "LANDLORD" ||
-    currentUser.orgRole !== "ORG_ADMIN"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (currentUser as any).orgRole !== "ORG_ADMIN"
   ) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 403 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentOrgId = (currentUser as any).orgId ?? null;
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "ID fehlt." }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "ID fehlt." }, { status: 400 });
   if (id === currentUser.id) {
     return NextResponse.json({ error: "Sie können Ihr eigenes Konto nicht löschen." }, { status: 400 });
   }
 
-  const target = await db.user.findUnique({ where: { id } });
-  if (!target || target.role !== "LANDLORD") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const target = await (db.user as any).findUnique({ where: { id }, select: { role: true, orgId: true } });
+  if (!target || target.role !== "LANDLORD" || target.orgId !== currentOrgId) {
     return NextResponse.json({ error: "Benutzer nicht gefunden." }, { status: 404 });
   }
 

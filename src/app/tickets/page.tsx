@@ -10,6 +10,7 @@ import {
   chatNotesInclude
 } from "@/lib/ticket-board-rows";
 import { archiveTenantsPastLeaseEnd } from "@/lib/tenant-lease";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 const boardInclude = {
   tenant: true,
@@ -24,6 +25,10 @@ export default async function TicketsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   await archiveTenantsPastLeaseEnd();
+  const user = await getLandlordSessionUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId = (user as any)?.orgId ?? null;
+  const orgWhere = { tenant: { orgId } };
 
   const params = await searchParams;
   const filter = (params.filter ?? "") as FilterMode | "";
@@ -35,21 +40,21 @@ export default async function TicketsPage({
   const [openRaw, progressRaw, doneRaw] = await Promise.all([
     showOpen
       ? db.ticket.findMany({
-          where: { status: TicketStatus.OPEN },
+          where: { status: TicketStatus.OPEN, ...orgWhere },
           include: boardInclude,
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
     showProgress
       ? db.ticket.findMany({
-          where: { status: TicketStatus.IN_PROGRESS },
+          where: { status: TicketStatus.IN_PROGRESS, ...orgWhere },
           include: boardInclude,
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
     showDone
       ? db.ticket.findMany({
-          where: { status: TicketStatus.DONE },
+          where: { status: TicketStatus.DONE, ...orgWhere },
           include: boardInclude,
           orderBy: { updatedAt: "desc" },
         })

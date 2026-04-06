@@ -51,12 +51,16 @@ export default async function DashboardPage() {
     redirect("/admin");
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId = (sessionUser as any)?.orgId ?? null;
+  const orgWhere = { tenant: { orgId } };
+
   const [open, inProgress, done, actionTicketsRaw] = await Promise.all([
-    db.ticket.count({ where: { status: TicketStatus.OPEN } }),
-    db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS } }),
-    db.ticket.count({ where: { status: TicketStatus.DONE } }),
+    db.ticket.count({ where: { status: TicketStatus.OPEN, ...orgWhere } }),
+    db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS, ...orgWhere } }),
+    db.ticket.count({ where: { status: TicketStatus.DONE, ...orgWhere } }),
     db.ticket.findMany({
-      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] } },
+      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] }, ...orgWhere },
       include: { tenant: true, ...chatNotesInclude }
     })
   ]);

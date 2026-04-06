@@ -397,27 +397,19 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
                         {u.email}
                       </p>
                       {/* Rolle ändern */}
-                      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                        {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map((r) => (
-                          <button
-                            key={r}
-                            type="button"
-                            disabled={u.orgRole === r || roleChanging === u.id}
-                            onClick={() => void changeOrgRole(u.id, r)}
-                            style={{
-                              fontSize: 11,
-                              padding: "3px 8px",
-                              borderRadius: 8,
-                              border: `1px solid ${u.orgRole === r ? ORG_ROLE_COLORS[r] : "var(--color-border, #e5e7eb)"}`,
-                              background: u.orgRole === r ? ORG_ROLE_COLORS[r] + "18" : "transparent",
-                              color: u.orgRole === r ? ORG_ROLE_COLORS[r] : "var(--color-muted, #6b7280)",
-                              cursor: u.orgRole === r ? "default" : "pointer",
-                              fontWeight: u.orgRole === r ? 600 : 400,
-                            }}
-                          >
-                            {ORG_ROLE_LABELS[r]}
-                          </button>
-                        ))}
+                      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 11, color: "var(--color-muted, #6b7280)" }}>Rolle:</span>
+                        <select
+                          value={u.orgRole}
+                          disabled={roleChanging === u.id}
+                          onChange={e => void changeOrgRole(u.id, e.target.value as OrgRole)}
+                          style={{ fontSize: 12, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--color-border, #e5e7eb)", background: "var(--card-bg, #fff)", color: "inherit", cursor: "pointer" }}
+                        >
+                          <option value="ORG_ADMIN">Admin</option>
+                          <option value="ORG_USER">Benutzer</option>
+                          <option value="ORG_GUEST">Gast (nur Lesen)</option>
+                        </select>
+                        {roleChanging === u.id && <span style={{ fontSize: 11, color: "var(--color-muted, #6b7280)" }}>…</span>}
                       </div>
                       <ResetPasswordInline userId={u.id} name={u.name} />
                     </div>

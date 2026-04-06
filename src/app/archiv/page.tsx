@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { TicketsBoardSection } from "@/components/tickets/tickets-board-section";
 import { db } from "@/lib/db";
 import { annotateTicketsForLandlordBoard, chatNotesInclude } from "@/lib/ticket-board-rows";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 const boardInclude = {
   tenant: true,
@@ -12,8 +13,12 @@ const boardInclude = {
 } as const;
 
 export default async function ArchivPage() {
+  const user = await getLandlordSessionUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId = (user as any)?.orgId ?? null;
+
   const doneRaw = await db.ticket.findMany({
-    where: { status: TicketStatus.DONE },
+    where: { status: TicketStatus.DONE, tenant: { orgId } },
     include: boardInclude,
     orderBy: { updatedAt: "desc" }
   });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import {
   archivedAtForLeaseEnd,
   parseLeaseEndDateInput,
@@ -18,6 +19,10 @@ type CreateTenantBody = {
 };
 
 export async function POST(request: NextRequest) {
+  const sessionUser = await getLandlordSessionUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId: string | null = (sessionUser as any)?.orgId ?? null;
+
   const body = (await request.json()) as CreateTenantBody;
   const name = body.name?.trim();
   const emailRaw = body.email?.trim().toLowerCase();
@@ -79,7 +84,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const tenant = await db.$transaction(async (tx) => {
-      const t = await tx.tenant.create({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const t = await (tx.tenant as any).create({
         data: {
           name,
           email: emailRaw,
@@ -87,7 +93,8 @@ export async function POST(request: NextRequest) {
           apartment,
           leaseStart,
           leaseEnd,
-          archivedAt
+          archivedAt,
+          orgId,
         }
       });
       await tx.user.create({

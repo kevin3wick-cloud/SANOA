@@ -3,14 +3,18 @@ export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { db } from "@/lib/db";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
+import { tenantOrgFilter } from "@/lib/org-filter";
 import { archiveTenantsPastLeaseEnd } from "@/lib/tenant-lease";
 import { formatDate } from "@/lib/format";
 
 export default async function MieterArchivPage() {
   await archiveTenantsPastLeaseEnd();
+  const user = await getLandlordSessionUser();
 
-  const tenants = await db.tenant.findMany({
-    where: { archivedAt: { not: null } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tenants = await (db.tenant as any).findMany({
+    where: { archivedAt: { not: null }, ...tenantOrgFilter(user as any) },
     include: {
       _count: { select: { tickets: true } }
     },
