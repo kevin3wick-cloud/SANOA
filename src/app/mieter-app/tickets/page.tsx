@@ -16,9 +16,18 @@ export default async function MieterTicketsPage() {
           <MieterNav />
           <div>
             <h1 className="page-title">Tickets</h1>
-            <p className="page-lead muted">Alle deine Anfragen im Überblick.</p>
+            <p className="page-lead muted">Deine aktiven Anfragen im Überblick.</p>
           </div>
-          <MieterTicketsList title="Alle Tickets" />
+          <MieterTicketsList
+            title="Aktive Tickets"
+            statusFilter={["OPEN", "IN_PROGRESS"]}
+            emptyText="Keine offenen Tickets – alles erledigt!"
+          />
+          <MieterTicketsList
+            title="Archiv – Erledigte Tickets"
+            statusFilter={["DONE"]}
+            emptyText="Noch keine abgeschlossenen Tickets."
+          />
         </div>
       </div>
     </main>

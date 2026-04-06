@@ -21,9 +21,11 @@ type TicketRow = Omit<Ticket, "createdAt" | "updatedAt"> & {
 type MieterTicketsListProps = {
   limit?: number;
   title?: string;
+  statusFilter?: TicketStatus[];
+  emptyText?: string;
 };
 
-export function MieterTicketsList({ limit, title = "Deine Tickets" }: MieterTicketsListProps) {
+export function MieterTicketsList({ limit, title = "Deine Tickets", statusFilter, emptyText }: MieterTicketsListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [tickets, setTickets] = useState<TicketRow[] | null>(null);
@@ -70,8 +72,11 @@ export function MieterTicketsList({ limit, title = "Deine Tickets" }: MieterTick
     };
   }, [router, pathname]);
 
+  const filtered = tickets && statusFilter
+    ? tickets.filter((t) => statusFilter.includes(t.status as TicketStatus))
+    : tickets;
   const shown =
-    tickets && limit !== undefined ? tickets.slice(0, limit) : tickets;
+    filtered && limit !== undefined ? filtered.slice(0, limit) : filtered;
 
   return (
     <div className="card stack">
@@ -79,7 +84,7 @@ export function MieterTicketsList({ limit, title = "Deine Tickets" }: MieterTick
       {error && <p className="muted">{error}</p>}
       {tickets === null && !error && <p className="muted">Lade Tickets …</p>}
       {shown && shown.length === 0 && !error && (
-        <p className="muted">Noch keine Tickets.</p>
+        <p className="muted">{emptyText ?? "Noch keine Tickets."}</p>
       )}
       {shown && shown.length > 0 && (
         <ul className="stack" style={{ listStyle: "none", margin: 0, padding: 0, gap: 12 }}>

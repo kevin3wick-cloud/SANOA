@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import Link from "next/link";
 import { TicketStatus } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { TicketsBoardSection } from "@/components/tickets/tickets-board-section";
@@ -18,7 +19,7 @@ const boardInclude = {
 export default async function TicketsPage() {
   await archiveTenantsPastLeaseEnd();
 
-  const [openRaw, progressRaw, doneRaw] = await Promise.all([
+  const [openRaw, progressRaw, doneCount] = await Promise.all([
     db.ticket.findMany({
       where: { status: TicketStatus.OPEN },
       include: boardInclude,
@@ -29,16 +30,11 @@ export default async function TicketsPage() {
       include: boardInclude,
       orderBy: { createdAt: "desc" }
     }),
-    db.ticket.findMany({
-      where: { status: TicketStatus.DONE },
-      include: boardInclude,
-      orderBy: { createdAt: "desc" }
-    })
+    db.ticket.count({ where: { status: TicketStatus.DONE } })
   ]);
 
   const openTickets = annotateTicketsForLandlordBoard(openRaw);
   const progressTickets = annotateTicketsForLandlordBoard(progressRaw);
-  const doneTickets = annotateTicketsForLandlordBoard(doneRaw);
 
   return (
     <AppShell>
@@ -46,8 +42,8 @@ export default async function TicketsPage() {
         <div>
           <h1 className="page-title">Tickets</h1>
           <p className="page-lead muted">
-            Nach Status gruppiert – pro Bereich direkt in der Tabelle filtern (z.&nbsp;B. unter
-            „Wohnung“).
+            Aktive Tickets nach Status – erledigte Tickets im{" "}
+            <Link href="/archiv" style={{ color: "var(--accent)" }}>Archiv</Link>.
           </p>
         </div>
 
@@ -62,7 +58,17 @@ export default async function TicketsPage() {
           tone="progress"
           tickets={progressTickets}
         />
-        <TicketsBoardSection title="Erledigt" tone="done" tickets={doneTickets} />
+
+        {doneCount > 0 && (
+          <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
+            <span className="muted" style={{ fontSize: 14 }}>
+              {doneCount} erledigte{doneCount === 1 ? "s Ticket" : " Tickets"} im Archiv
+            </span>
+            <Link href="/archiv" style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600 }}>
+              Archiv öffnen →
+            </Link>
+          </div>
+        )}
       </div>
     </AppShell>
   );

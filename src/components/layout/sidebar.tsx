@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Archive,
+  BarChart2,
   Building2,
   FileText,
   LayoutDashboard,
@@ -16,8 +17,9 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Ticket },
+  { href: "/archiv", label: "Archiv", icon: Archive },
+  { href: "/reporting", label: "Auswertung", icon: BarChart2 },
   { href: "/mieter", label: "Mieter", icon: Users },
-  { href: "/mieter/archiv", label: "Mieter-Archiv", icon: Archive },
   { href: "/dokumente", label: "Dokumente", icon: FileText },
   { href: "/einstellungen", label: "Einstellungen", icon: Settings2 }
 ];
@@ -27,13 +29,10 @@ function isNavActive(href: string, pathname: string) {
     return pathname === "/dashboard";
   }
   if (href === "/mieter") {
-    return (
-      pathname === "/mieter" ||
-      (pathname.startsWith("/mieter/") && !pathname.startsWith("/mieter/archiv"))
-    );
+    return pathname === "/mieter" || pathname.startsWith("/mieter/");
   }
-  if (href === "/mieter/archiv") {
-    return pathname.startsWith("/mieter/archiv");
+  if (href === "/tickets") {
+    return pathname === "/tickets" || pathname.startsWith("/tickets/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
