@@ -6,7 +6,7 @@ const MIETER_COOKIE = "sanoa_mieter_session";
 const LANDLORD_ROUTES = [
   "/dashboard",
   "/admin",
-  "/mieter",
+  "/mieter/",
   "/tickets",
   "/einstellungen",
   "/dokumente",
