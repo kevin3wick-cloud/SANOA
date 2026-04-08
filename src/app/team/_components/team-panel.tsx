@@ -84,7 +84,7 @@ function ResetPasswordInline({ userId, name }: { userId: string; name: string })
   if (!open) return (
     <button type="button" onClick={() => setOpen(true)} style={{
       background: "none", border: "none", padding: 0, cursor: "pointer",
-      fontSize: 12, color: "var(--muted, #6b7280)",
+      fontSize: 12, color: "var(--muted)",
       display: "inline-flex", alignItems: "center", gap: 4,
     }}>
       <KeyRound size={11} strokeWidth={1.75} /> Passwort zurücksetzen
@@ -193,14 +193,14 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             <input type="password" placeholder="Passwort (min. 6 Zeichen)" value={password}
               onChange={e => setPassword(e.target.value)} required minLength={6} />
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--muted, #6b7280)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rolle</label>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rolle</label>
               <div style={{ display: "flex", gap: 8 }}>
                 {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
                   <label key={r} style={{
                     flex: 1, display: "flex", flexDirection: "column", gap: 3,
                     padding: "10px 12px", borderRadius: 10, cursor: "pointer",
-                    border: `2px solid ${orgRole === r ? ROLE_COLOR[r] : "var(--border, #e5e7eb)"}`,
-                    background: orgRole === r ? ROLE_COLOR[r] + "08" : "transparent",
+                    border: `2px solid ${orgRole === r ? ROLE_COLOR[r] : "var(--border)"}`,
+                    background: orgRole === r ? ROLE_COLOR[r] + "0d" : "transparent",
                     transition: "border-color 0.15s",
                   }}>
                     <input type="radio" name="orgRole" value={r} checked={orgRole === r}
@@ -208,7 +208,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                     <span style={{ fontSize: 13, fontWeight: 600, color: orgRole === r ? ROLE_COLOR[r] : "inherit" }}>
                       {ROLE_LABELS[r]}
                     </span>
-                    <span style={{ fontSize: 11, color: "var(--muted, #6b7280)" }}>{ROLE_DESC[r]}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>{ROLE_DESC[r]}</span>
                   </label>
                 ))}
               </div>
@@ -216,24 +216,24 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             <div style={{ display: "flex", gap: 8 }}>
               <button type="submit" disabled={addLoading}>{addLoading ? "Wird erstellt…" : "Hinzufügen"}</button>
               <button type="button" onClick={() => setShowAdd(false)}
-                style={{ background: "transparent", border: "1px solid var(--border, #e5e7eb)" }}>
+                style={{ background: "transparent", border: "1px solid var(--border)" }}>
                 Abbrechen
               </button>
             </div>
           </form>
           {feedback && (
-            <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#16a34a" : "#dc2626" }}>{feedback.text}</p>
+            <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#34d399" : "#f87171" }}>{feedback.text}</p>
           )}
         </div>
       )}
 
       {feedback && !showAdd && (
-        <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#16a34a" : "#dc2626" }}>{feedback.text}</p>
+        <p style={{ margin: 0, fontSize: 13, color: feedback.ok ? "#34d399" : "#f87171" }}>{feedback.text}</p>
       )}
 
       {/* Members list */}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border, #e5e7eb)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Mitarbeiter</h2>
           <span className="muted" style={{ fontSize: 13 }}>{members.length} Personen</span>
         </div>
@@ -247,7 +247,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             {members.map((m, idx) => (
               <div key={m.id} style={{
                 padding: "14px 20px",
-                borderBottom: idx < members.length - 1 ? "1px solid var(--border, #e5e7eb)" : "none",
+                borderBottom: idx < members.length - 1 ? "1px solid var(--border)" : "none",
                 display: "flex", alignItems: "flex-start", gap: 12,
               }}>
                 <Avatar name={m.name} color={ROLE_COLOR[m.orgRole]} />
@@ -256,15 +256,15 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</span>
                     <RolePill role={m.orgRole} />
                     {m.id === currentUserId && (
-                      <span style={{ fontSize: 11, color: "var(--muted, #6b7280)", fontStyle: "italic" }}>Sie</span>
+                      <span style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>Sie</span>
                     )}
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted, #6b7280)" }}>{m.email}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{m.email}</p>
                   {m.id !== currentUserId && (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                       {/* Role dropdown */}
                       <select value={m.orgRole} onChange={e => void changeRole(m.id, e.target.value as OrgRole)}
-                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border, #e5e7eb)", background: "var(--card-bg, #fff)", color: "inherit", cursor: "pointer" }}>
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, width: "auto", cursor: "pointer" }}>
                         {(["ORG_ADMIN", "ORG_USER", "ORG_GUEST"] as OrgRole[]).map(r => (
                           <option key={r} value={r}>{ROLE_LABELS[r]} – {ROLE_DESC[r]}</option>
                         ))}
@@ -278,12 +278,12 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                     title="Mitarbeiter entfernen"
                     style={{
                       background: "none", border: "1px solid transparent", borderRadius: 6,
-                      padding: "5px 7px", cursor: "pointer", color: "var(--muted, #9ca3af)",
+                      padding: "5px 7px", cursor: "pointer", color: "var(--muted)",
                       display: "inline-flex", alignItems: "center", flexShrink: 0,
-                      transition: "color 0.15s, border-color 0.15s",
+                      width: "auto", transition: "color 0.15s, border-color 0.15s",
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#fca5a5"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--muted, #9ca3af)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "transparent"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#f87171"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#f8717144"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "transparent"; }}
                   >
                     <Trash2 size={14} strokeWidth={1.75} aria-hidden />
                   </button>
