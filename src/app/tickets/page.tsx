@@ -17,7 +17,7 @@ const boardInclude = {
   ...chatNotesInclude
 } as const;
 
-type FilterMode = "open" | "progress" | "all";
+type FilterMode = "open" | "progress" | "all" | "assigned";
 
 export default async function TicketsPage({
   searchParams,
@@ -33,11 +33,15 @@ export default async function TicketsPage({
   const params = await searchParams;
   const filter = (params.filter ?? "") as FilterMode | "";
 
-  const showOpen = filter === "open" || filter === "" || filter === "all";
+  const showOpen     = filter === "open"     || filter === "" || filter === "all";
   const showProgress = filter === "progress" || filter === "" || filter === "all";
-  const showDone = filter === "all";
+  const showDone     = filter === "all";
+  const showAssigned = filter === "assigned";
 
-  const [openRaw, progressRaw, doneRaw] = await Promise.all([
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const assignedWhere = { assignedToId: user?.id, status: { not: TicketStatus.DONE }, ...(orgWhere as any) };
+
+  const [openRaw, progressRaw, doneRaw, assignedRaw] = await Promise.all([
     showOpen
       ? db.ticket.findMany({
           where: { status: TicketStatus.OPEN, ...orgWhere },
@@ -59,26 +63,35 @@ export default async function TicketsPage({
           orderBy: { updatedAt: "desc" },
         })
       : Promise.resolve([]),
+    showAssigned
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? (db.ticket as any).findMany({
+          where: assignedWhere,
+          include: boardInclude,
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
 
-  const openTickets = annotateTicketsForLandlordBoard(openRaw);
+  const openTickets     = annotateTicketsForLandlordBoard(openRaw);
   const progressTickets = annotateTicketsForLandlordBoard(progressRaw);
-  const doneTickets = annotateTicketsForLandlordBoard(doneRaw);
+  const doneTickets     = annotateTicketsForLandlordBoard(doneRaw);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const assignedTickets = annotateTicketsForLandlordBoard(assignedRaw as any);
 
   const filterLabel =
-    filter === "open"
-      ? "Offene Tickets"
-      : filter === "progress"
-      ? "Tickets in Bearbeitung"
-      : filter === "all"
-      ? "Alle Tickets"
-      : "Aktive Tickets";
+    filter === "open"     ? "Offene Tickets"        :
+    filter === "progress" ? "Tickets in Bearbeitung" :
+    filter === "all"      ? "Alle Tickets"           :
+    filter === "assigned" ? "Meine Tickets"          :
+                            "Aktive Tickets";
 
   const filterTabs: { label: string; href: string; active: boolean }[] = [
-    { label: "Aktiv", href: "/tickets", active: filter === "" },
-    { label: "Offen", href: "/tickets?filter=open", active: filter === "open" },
-    { label: "In Bearbeitung", href: "/tickets?filter=progress", active: filter === "progress" },
-    { label: "Alle", href: "/tickets?filter=all", active: filter === "all" },
+    { label: "Aktiv",              href: "/tickets",                  active: filter === "" },
+    { label: "Offen",              href: "/tickets?filter=open",      active: filter === "open" },
+    { label: "In Bearbeitung",     href: "/tickets?filter=progress",  active: filter === "progress" },
+    { label: "Zugewiesen",         href: "/tickets?filter=assigned",  active: filter === "assigned" },
+    { label: "Alle",               href: "/tickets?filter=all",       active: filter === "all" },
   ];
 
   return (
@@ -96,8 +109,8 @@ export default async function TicketsPage({
                   borderRadius: 20,
                   fontSize: 13,
                   fontWeight: tab.active ? 600 : 400,
-                  background: tab.active ? "var(--accent)" : "var(--card-bg)",
-                  color: tab.active ? "#fff" : "var(--fg)",
+                  background: tab.active ? "var(--accent)" : "transparent",
+                  color: tab.active ? "#fff" : "var(--muted)",
                   border: "1px solid",
                   borderColor: tab.active ? "var(--accent)" : "var(--border)",
                   textDecoration: "none",
@@ -130,6 +143,19 @@ export default async function TicketsPage({
             tone="done"
             tickets={doneTickets}
           />
+        )}
+        {showAssigned && (
+          assignedTickets.length === 0 ? (
+            <p className="muted" style={{ fontSize: 14 }}>
+              Dir sind aktuell keine offenen Tickets zugewiesen.
+            </p>
+          ) : (
+            <TicketsBoardSection
+              title="Mir zugewiesen"
+              tone="progress"
+              tickets={assignedTickets}
+            />
+          )
         )}
       </div>
     </AppShell>
