@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { db } from "@/lib/db";
 import { formatCategory } from "@/lib/format";
 import { TicketCategory } from "@prisma/client";
+import { ReportingRefresher } from "./reporting-refresher";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -20,11 +21,18 @@ function sortedEntries(obj: Record<string, number>): [string, number][] {
   return Object.entries(obj).sort((a, b) => b[1] - a[1]);
 }
 
+/** Extracts "Marke: XYZ" from a ticket description, or null. */
+function parseMarke(description: string): string | null {
+  const match = description.match(/Marke:\s*([^·\n]+)/i);
+  return match ? match[1].trim() : null;
+}
+
 // ── chart components ───────────────────────────────────────────────────────
 
 const ACCENT = "#6366f1";
 const CHART_COLORS = [
-  "#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6"
+  "#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6",
+  "#a855f7", "#f97316", "#06b6d4"
 ];
 
 function HorizontalBar({ label, value, max, color = ACCENT }: {
@@ -158,6 +166,7 @@ export default async function ReportingPage() {
       status: true,
       category: true,
       location: true,
+      description: true,
       createdAt: true,
       updatedAt: true
     },
@@ -175,9 +184,23 @@ export default async function ReportingPage() {
   );
   const maxCat = byCategory[0]?.[1] ?? 1;
 
-  // By location
+  // By location – full "Raum – Unterpunkt" string
   const byLocation = sortedEntries(groupBy(tickets, (t) => t.location));
   const maxLoc = byLocation[0]?.[1] ?? 1;
+
+  // By room – just the part before " – " (or the whole string if no dash)
+  const byRoom = sortedEntries(
+    groupBy(tickets, (t) => t.location.split(" – ")[0].trim())
+  );
+  const maxRoom = byRoom[0]?.[1] ?? 1;
+
+  // Hersteller / Marke – parsed from description
+  const ticketsWithMarke = tickets
+    .map((t) => parseMarke(t.description))
+    .filter((m): m is string => m !== null);
+
+  const byMarke = sortedEntries(groupBy(ticketsWithMarke, (m) => m));
+  const maxMarke = byMarke[0]?.[1] ?? 1;
 
   // Monthly trend – last 12 months
   const now = new Date();
@@ -205,6 +228,9 @@ export default async function ReportingPage() {
 
   return (
     <AppShell>
+      {/* Auto-refreshes data every 60 s */}
+      <ReportingRefresher intervalMs={60_000} />
+
       <div className="stack" style={{ maxWidth: 860 }}>
         <div>
           <h1 className="page-title">Auswertung</h1>
@@ -228,9 +254,29 @@ export default async function ReportingPage() {
           <DonutChart open={open} inProgress={inProgress} done={done} />
         </div>
 
-        {/* By Location */}
+        {/* By Room (grouped) */}
         <div className="card stack">
-          <h3 style={{ margin: 0 }}>Probleme nach Ort</h3>
+          <h3 style={{ margin: 0 }}>Probleme nach Raum</h3>
+          {byRoom.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: 13 }}>Noch keine Daten.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {byRoom.map(([room, count], i) => (
+                <HorizontalBar
+                  key={room}
+                  label={room}
+                  value={count}
+                  max={maxRoom}
+                  color={CHART_COLORS[i % CHART_COLORS.length]}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* By Location (detailed) */}
+        <div className="card stack">
+          <h3 style={{ margin: 0 }}>Probleme nach Ort (Detail)</h3>
           {byLocation.length === 0 ? (
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>Noch keine Daten.</p>
           ) : (
@@ -261,6 +307,29 @@ export default async function ReportingPage() {
                   label={cat}
                   value={count}
                   max={maxCat}
+                  color={CHART_COLORS[i % CHART_COLORS.length]}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Hersteller */}
+        <div className="card stack">
+          <h3 style={{ margin: 0 }}>Hersteller-Auswertung</h3>
+          <p className="muted" style={{ margin: "0 0 4px", fontSize: 13 }}>
+            Basierend auf Tickets mit Geräteangabe ({ticketsWithMarke.length} von {total})
+          </p>
+          {byMarke.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: 13 }}>Noch keine Geräte-Tickets erfasst.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {byMarke.map(([marke, count], i) => (
+                <HorizontalBar
+                  key={marke}
+                  label={marke}
+                  value={count}
+                  max={maxMarke}
                   color={CHART_COLORS[i % CHART_COLORS.length]}
                 />
               ))}
