@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
 import { MieterResetPasswordForm } from "./_components/mieter-reset-password-form";
+import { MieterStammdatenForm } from "./_components/mieter-stammdaten-form";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
@@ -36,23 +37,14 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
       <div className="stack">
         <h1 className="page-title">Mieter-Details</h1>
         <p className="page-lead muted">Stammdaten, Tickets und Dokumente.</p>
-        <div className="card stack">
-          <p>
-            <strong>Name:</strong> {tenant.name}
-          </p>
-          <p>
-            <strong>Kontakt:</strong> {tenant.email} / {tenant.phone}
-          </p>
-          <p>
-            <strong>Wohnung:</strong> {tenant.apartment}
-          </p>
-          {tenant.archivedAt ? (
-            <p className="muted">
-              <strong>Archiv:</strong> archiviert am {formatDate(tenant.archivedAt)} – kein
-              Mieter-Portal-Zugang.
-            </p>
-          ) : null}
-        </div>
+        <MieterStammdatenForm
+          tenantId={tenant.id}
+          name={tenant.name}
+          email={tenant.email}
+          phone={tenant.phone}
+          apartment={tenant.apartment}
+          archivedAt={tenant.archivedAt?.toISOString() ?? null}
+        />
 
         <TenantLeaseForm
           tenantId={tenant.id}
