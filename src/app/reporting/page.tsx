@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatCategory } from "@/lib/format";
 import { TicketCategory } from "@prisma/client";
 import { ReportingRefresher } from "./reporting-refresher";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -161,7 +162,12 @@ function MonthlyBars({ data }: { data: { month: string; count: number }[] }) {
 // ── page ──────────────────────────────────────────────────────────────────
 
 export default async function ReportingPage() {
+  const user = await getLandlordSessionUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId = (user as any)?.orgId ?? null;
+
   const tickets = await db.ticket.findMany({
+    where: { tenant: { orgId } },
     select: {
       status: true,
       category: true,
