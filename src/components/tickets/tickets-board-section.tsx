@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { TicketCategory } from "@prisma/client";
 import { useMemo, useState } from "react";
-import { formatCategory, formatDate, formatStatus, getStatusBadgeClassName } from "@/lib/format";
+import { formatCategory, formatDate } from "@/lib/format";
 import type { TicketWithTenantAndUnread } from "@/lib/ticket-board-rows";
 
 type FilterValues = {
@@ -11,6 +11,7 @@ type FilterValues = {
   tenantName: string;
   apartment: string;
   category: TicketCategory | "";
+  assignedTo: string;
   createdFrom: string;
   createdTo: string;
 };
@@ -19,12 +20,17 @@ function filterTickets(tickets: TicketWithTenantAndUnread[], f: FilterValues) {
   const titleQ = f.title.trim().toLowerCase();
   const tenantQ = f.tenantName.trim().toLowerCase();
   const aptQ = f.apartment.trim().toLowerCase();
+  const assignedQ = f.assignedTo.trim().toLowerCase();
 
   return tickets.filter((t) => {
     if (titleQ && !t.title.toLowerCase().includes(titleQ)) return false;
     if (tenantQ && !t.tenant.name.toLowerCase().includes(tenantQ)) return false;
     if (aptQ && !t.tenant.apartment.toLowerCase().includes(aptQ)) return false;
     if (f.category && t.category !== f.category) return false;
+    if (assignedQ) {
+      const name = t.assignedTo?.name.toLowerCase() ?? "";
+      if (!name.includes(assignedQ)) return false;
+    }
     if (f.createdFrom) {
       const from = new Date(`${f.createdFrom}T00:00:00`);
       if (t.createdAt < from) return false;
@@ -43,6 +49,7 @@ function hasAnyFilter(f: FilterValues) {
       f.tenantName.trim() ||
       f.apartment.trim() ||
       f.category ||
+      f.assignedTo.trim() ||
       f.createdFrom ||
       f.createdTo
   );
@@ -68,6 +75,7 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
   const [tenantName, setTenantName] = useState("");
   const [apartment, setApartment] = useState("");
   const [category, setCategory] = useState<TicketCategory | "">("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
 
@@ -78,10 +86,11 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
         tenantName,
         apartment,
         category,
+        assignedTo,
         createdFrom,
         createdTo
       }),
-    [tickets, titleQ, tenantName, apartment, category, createdFrom, createdTo]
+    [tickets, titleQ, tenantName, apartment, category, assignedTo, createdFrom, createdTo]
   );
 
   const filtersActive = hasAnyFilter({
@@ -89,6 +98,7 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
     tenantName,
     apartment,
     category,
+    assignedTo,
     createdFrom,
     createdTo
   });
@@ -177,18 +187,15 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
                 </div>
               </th>
               <th>
-                <div className="tickets-th-stack tickets-th-stack-static">
+                <div className="tickets-th-stack">
                   <span>Zuständig</span>
-                </div>
-              </th>
-              <th>
-                <div className="tickets-th-stack tickets-th-stack-static">
-                  <span>Chat</span>
-                </div>
-              </th>
-              <th>
-                <div className="tickets-th-stack tickets-th-stack-static">
-                  <span>Status</span>
+                  <input
+                    type="search"
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    placeholder="Suchen…"
+                    aria-label="Zuständig filtern"
+                  />
                 </div>
               </th>
               <th>
@@ -215,7 +222,7 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="muted tickets-filter-empty-cell">
+                <td colSpan={6} className="muted tickets-filter-empty-cell">
                   {filtersActive ? "Keine Treffer für diese Filter." : "Keine Tickets."}
                 </td>
               </tr>
@@ -256,20 +263,6 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
                     ) : (
                       <span className="muted" style={{ fontSize: 13 }}>—</span>
                     )}
-                  </td>
-                  <td>
-                    {ticket.unreadFromTenant ? (
-                      <span className="chat-unread-dot-wrap" aria-label="Ungelesene Mieter-Nachricht">
-                        <span className="chat-unread-dot" />
-                      </span>
-                    ) : (
-                      <span className="muted">—</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={getStatusBadgeClassName(ticket.status)}>
-                      {formatStatus(ticket.status)}
-                    </span>
                   </td>
                   <td>{formatDate(ticket.createdAt)}</td>
                 </tr>
