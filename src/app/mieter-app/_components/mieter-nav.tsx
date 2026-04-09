@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AlertCircle, Home, ListTodo } from "lucide-react";
+import { AlertCircle, Home, ListTodo, Settings } from "lucide-react";
 
 export function MieterNav() {
   const pathname = usePathname();
@@ -63,6 +63,13 @@ export function MieterNav() {
             {landlordUnreadCount > 9 ? "9+" : landlordUnreadCount}
           </span>
         ) : null}
+      </Link>
+      <Link
+        href="/mieter-app/einstellungen"
+        className={linkClass(pathname === "/mieter-app/einstellungen")}
+      >
+        <Settings size={18} strokeWidth={1.75} aria-hidden />
+        Einstellungen
       </Link>
       <Link
         href="/mieter-app/tickets/new"

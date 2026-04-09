@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 export function MieterTopBar() {
   const router = useRouter();
@@ -15,14 +14,6 @@ export function MieterTopBar() {
 
   return (
     <div className="mieter-top-bar">
-      <Link
-        href="/mieter-app/einstellungen"
-        className="secondary-button mieter-logout-btn"
-        title="Einstellungen"
-      >
-        <Settings size={14} strokeWidth={1.75} aria-hidden />
-        Einstellungen
-      </Link>
       <button
         type="button"
         className="secondary-button mieter-logout-btn"
