@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatCategory } from "@/lib/format";
 import { TicketCategory } from "@prisma/client";
 import { ReportingRefresher } from "./reporting-refresher";
+import { ReportingDateFilter } from "./reporting-date-filter";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -161,13 +162,29 @@ function MonthlyBars({ data }: { data: { month: string; count: number }[] }) {
 
 // ── page ──────────────────────────────────────────────────────────────────
 
-export default async function ReportingPage() {
+export default async function ReportingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const user = await getLandlordSessionUser();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orgId = (user as any)?.orgId ?? null;
 
+  const params = await searchParams;
+  const fromStr = params.from ?? "";
+  const toStr   = params.to   ?? "";
+
+  const dateWhere: { gte?: Date; lte?: Date } = {};
+  if (fromStr) dateWhere.gte = new Date(`${fromStr}T00:00:00`);
+  if (toStr)   dateWhere.lte = new Date(`${toStr}T23:59:59.999`);
+  const hasDateFilter = Boolean(fromStr || toStr);
+
   const tickets = await db.ticket.findMany({
-    where: { tenant: { orgId } },
+    where: {
+      tenant: { orgId },
+      ...(hasDateFilter ? { createdAt: dateWhere } : {}),
+    },
     select: {
       status: true,
       category: true,
@@ -241,6 +258,18 @@ export default async function ReportingPage() {
         <div>
           <h1 className="page-title">Auswertung</h1>
           <p className="page-lead muted">Übersicht über alle Tickets und häufige Problembereiche.</p>
+        </div>
+
+        {/* Date filter */}
+        <div className="card" style={{ padding: "14px 18px" }}>
+          <ReportingDateFilter from={fromStr} to={toStr} />
+          {hasDateFilter && (
+            <p className="muted" style={{ margin: "10px 0 0", fontSize: 12 }}>
+              Zeige {total} Ticket{total !== 1 ? "s" : ""} im gewählten Zeitraum
+              {fromStr ? ` ab ${new Date(`${fromStr}T00:00:00`).toLocaleDateString("de-DE")}` : ""}
+              {toStr   ? ` bis ${new Date(`${toStr}T00:00:00`).toLocaleDateString("de-DE")}` : ""}.
+            </p>
+          )}
         </div>
 
         {/* KPI Cards */}
