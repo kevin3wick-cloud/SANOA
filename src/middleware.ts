@@ -15,6 +15,7 @@ const LANDLORD_ROUTES = [
 const MIETER_ROUTES = [
   "/mieter-app/dashboard",
   "/mieter-app/tickets",
+  "/mieter-app/einstellungen",
 ];
 
 export function middleware(request: NextRequest) {
@@ -49,5 +50,6 @@ export const config = {
     "/dokumente/:path*",
     "/mieter-app/dashboard/:path*",
     "/mieter-app/tickets/:path*",
+    "/mieter-app/einstellungen/:path*",
   ],
 };
