@@ -7,6 +7,7 @@ import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
 import { MieterResetPasswordForm } from "./_components/mieter-reset-password-form";
 import { MieterStammdatenForm } from "./_components/mieter-stammdaten-form";
 import { MieterDeleteForm } from "./_components/mieter-delete-form";
+import { MieterQrForm } from "./_components/mieter-qr-form";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
@@ -16,7 +17,7 @@ type MieterDetailProps = {
 
 export default async function MieterDetailPage({ params }: MieterDetailProps) {
   const { id } = await params;
-  const tenant = await db.tenant.findUnique({
+  const tenant = await (db.tenant as any).findUnique({
     where: { id },
     include: {
       tickets: {
@@ -59,6 +60,12 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
           <MieterResetPasswordForm
             tenantId={tenant.id}
             hasAppAccess={Boolean(tenant.user)}
+          />
+          <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+          <h4 style={{ margin: "0 0 4px", fontSize: 14 }}>QR-Code Login</h4>
+          <MieterQrForm
+            tenantId={tenant.id}
+            initialToken={tenant.magicToken ?? null}
           />
         </div>
 
