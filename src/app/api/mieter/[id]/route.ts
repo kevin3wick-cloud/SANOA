@@ -83,3 +83,28 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const tenant = await db.tenant.findUnique({
+    where: { id },
+    include: { user: { select: { id: true } } }
+  });
+  if (!tenant) {
+    return NextResponse.json({ error: "Mieter nicht gefunden." }, { status: 404 });
+  }
+
+  // Delete user first (FK), then tenant (cascades tickets/notes/proposals)
+  await db.$transaction(async (tx) => {
+    if (tenant.user?.id) {
+      await tx.user.delete({ where: { id: tenant.user.id } });
+    }
+    await tx.tenant.delete({ where: { id } });
+  });
+
+  return NextResponse.json({ ok: true });
+}

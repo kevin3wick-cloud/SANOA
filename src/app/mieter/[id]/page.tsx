@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
 import { MieterResetPasswordForm } from "./_components/mieter-reset-password-form";
 import { MieterStammdatenForm } from "./_components/mieter-stammdaten-form";
+import { MieterDeleteForm } from "./_components/mieter-delete-form";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
@@ -110,6 +111,12 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
               ))}
             </ul>
           )}
+        </div>
+
+        {/* Danger zone */}
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: 24 }}>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 12 }}>Gefahrenzone</p>
+          <MieterDeleteForm tenantId={tenant.id} tenantName={tenant.name} />
         </div>
       </div>
     </AppShell>
