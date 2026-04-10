@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantCreateForm } from "@/components/mieter/tenant-create-form";
+import { TenantImportForm } from "@/components/mieter/tenant-import-form";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
@@ -40,6 +41,7 @@ export default async function MieterPage() {
           </p>
         </div>
         <TenantCreateForm />
+        <TenantImportForm />
         <div className="card">
           {tenants.length === 0 ? (
             <p className="muted">Keine Mieter vorhanden.</p>
