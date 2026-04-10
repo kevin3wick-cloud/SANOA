@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { QrCode, RefreshCw } from "lucide-react";
+import { QrCode, RefreshCw, Download } from "lucide-react";
 
 type Props = {
   tenantId: string;
@@ -12,12 +12,36 @@ type Props = {
 export function MieterQrForm({ tenantId, initialToken, baseUrl }: Props) {
   const [token, setToken] = useState<string | null>(initialToken);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
 
   const magicUrl = token ? `${baseUrl}/api/mieter-app/magic-login/${token}` : null;
   const qrSrc = magicUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(magicUrl)}`
     : null;
+
+  async function downloadQr() {
+    if (!qrSrc || !magicUrl) return;
+    setDownloading(true);
+    try {
+      // Fetch a larger version for better print quality
+      const highResSrc = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(magicUrl)}`;
+      const res = await fetch(highResSrc);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mieter-qr-login.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Download fehlgeschlagen.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   async function generate() {
     setLoading(true);
@@ -90,6 +114,30 @@ export function MieterQrForm({ tenantId, initialToken, baseUrl }: Props) {
           <RefreshCw size={14} strokeWidth={2} />
           {loading ? "Generiere …" : token ? "QR neu generieren" : "QR-Code erstellen"}
         </button>
+
+        {token && (
+          <button
+            type="button"
+            onClick={downloadQr}
+            disabled={downloading}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              width: "auto",
+              fontSize: 13,
+              padding: "8px 16px",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              cursor: "pointer",
+              color: "var(--fg)"
+            }}
+          >
+            <Download size={14} strokeWidth={2} />
+            {downloading ? "Lädt …" : "QR herunterladen"}
+          </button>
+        )}
       </div>
 
       {token && (
