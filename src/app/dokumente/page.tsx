@@ -12,7 +12,8 @@ export default async function DokumentePage() {
       include: { tenant: true },
       orderBy: { createdAt: "desc" }
     }),
-    db.tenant.findMany({
+    (db.tenant as any).findMany({
+      where: { archivedAt: null },
       select: { id: true, name: true },
       orderBy: { name: "asc" }
     })
