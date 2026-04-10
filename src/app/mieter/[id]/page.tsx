@@ -104,7 +104,7 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
             <ul style={{ margin: 0, paddingLeft: 20 }}>
               {tenant.documents.map((doc) => (
                 <li key={doc.id}>
-                  <a className="table-link" href={doc.fileUrl}>
+                  <a className="table-link" href={`/api/documents/${doc.id}/file`} target="_blank" rel="noreferrer">
                     {doc.name}
                   </a>
                 </li>

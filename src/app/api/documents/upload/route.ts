@@ -1,14 +1,12 @@
 import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { DocumentKind, DocumentVisibility } from "@prisma/client";
 import { db } from "@/lib/db";
+import { putObject } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const UPLOAD_SUBDIR = path.join("public", "uploads", "documents");
 
 function isPdfMagic(buffer: Buffer) {
   return buffer.subarray(0, 4).toString("latin1") === "%PDF";
@@ -98,20 +96,26 @@ export async function POST(request: NextRequest) {
 
   const kind = parseDocumentKind(formData.get("kind"));
 
-  const storedBase = `${randomUUID()}.pdf`;
-  const uploadDir = path.join(process.cwd(), UPLOAD_SUBDIR);
-  await mkdir(uploadDir, { recursive: true });
-  const diskPath = path.join(uploadDir, storedBase);
-  await writeFile(diskPath, buffer);
+  // Upload to Cloudflare R2
+  const r2Key = `docs/${randomUUID()}.pdf`;
+  try {
+    await putObject(r2Key, buffer, "application/pdf");
+  } catch (err) {
+    console.error("R2 upload error:", err);
+    return NextResponse.json(
+      { error: "Datei konnte nicht gespeichert werden." },
+      { status: 500 }
+    );
+  }
 
-  const publicUrl = `/uploads/documents/${storedBase}`;
   const originalFilename = file.name.replace(/[/\\]/g, "_").slice(0, 255);
 
+  // Store the R2 key as fileUrl (proxy route resolves it)
   const doc = await db.document.create({
     data: {
       name: displayName.slice(0, 255),
       originalFilename,
-      fileUrl: publicUrl,
+      fileUrl: r2Key,   // R2 object key, not a public URL
       visibility: visibilityRaw,
       kind,
       tenantId
@@ -132,5 +136,8 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ id: doc.id, fileUrl: publicUrl }, { status: 201 });
+  return NextResponse.json(
+    { id: doc.id, fileUrl: `/api/documents/${doc.id}/file` },
+    { status: 201 }
+  );
 }

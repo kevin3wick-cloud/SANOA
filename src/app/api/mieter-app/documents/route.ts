@@ -33,5 +33,11 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: "desc" }
   });
 
-  return NextResponse.json(documents);
+  // Replace raw R2 key with proxy route URL so the client can open the file
+  const mapped = documents.map((doc) => ({
+    ...doc,
+    fileUrl: `/api/documents/${doc.id}/file`,
+  }));
+
+  return NextResponse.json(mapped);
 }

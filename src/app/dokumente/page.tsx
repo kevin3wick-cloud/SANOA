@@ -48,7 +48,7 @@ export default async function DokumentePage() {
                 {documents.map((doc) => (
                   <tr key={doc.id}>
                     <td>
-                      <a className="table-link" href={doc.fileUrl}>
+                      <a className="table-link" href={`/api/documents/${doc.id}/file`} target="_blank" rel="noreferrer">
                         {doc.name}
                       </a>
                     </td>
