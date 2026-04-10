@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
@@ -19,16 +18,11 @@ type MieterDetailProps = {
 export default async function MieterDetailPage({ params }: MieterDetailProps) {
   const { id } = await params;
 
-  // Determine the public base URL:
-  // 1. NEXT_PUBLIC_APP_URL env var (most reliable, set in Railway)
-  // 2. x-forwarded-host from Railway proxy headers
-  // 3. Hardcoded Railway URL as last fallback (never localhost)
-  const hdrs = await headers();
-  const forwardedHost = hdrs.get("x-forwarded-host");
-  const forwardedProto = hdrs.get("x-forwarded-proto")?.split(",")[0] ?? "https";
+  // Base URL for QR code: use env var if set, else hardcoded Railway URL.
+  // Never use request headers — Railway's internal proxy sets host to localhost:8080.
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : "https://sanoa-production.up.railway.app");
+    "https://sanoa-production.up.railway.app";
 
   const tenant = await (db.tenant as any).findUnique({
     where: { id },
