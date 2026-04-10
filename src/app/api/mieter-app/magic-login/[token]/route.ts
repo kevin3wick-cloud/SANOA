@@ -15,7 +15,8 @@ export async function GET(
   const { token } = await params;
 
   if (!token || token.length < 32) {
-    return NextResponse.redirect(new URL("/mieter-app/login?error=invalid", _request.url));
+    // Use relative redirect — stays on the correct public domain
+    return NextResponse.redirect(new URL("/mieter-app/login?error=invalid", "https://sanoa-production.up.railway.app"));
   }
 
   // Find tenant by magic token
@@ -25,17 +26,26 @@ export async function GET(
   });
 
   if (!tenant || !tenant.user) {
-    return NextResponse.redirect(new URL("/mieter-app/login?error=invalid", _request.url));
+    return NextResponse.redirect(new URL("/mieter-app/login?error=invalid", "https://sanoa-production.up.railway.app"));
   }
 
   // Don't allow login for archived tenants
   if (tenant.archivedAt) {
-    return NextResponse.redirect(new URL("/mieter-app/login?error=archived", _request.url));
+    return NextResponse.redirect(new URL("/mieter-app/login?error=archived", "https://sanoa-production.up.railway.app"));
   }
 
-  // Create session and redirect to dashboard
+  // Create session cookie and redirect to dashboard
   const sessionToken = createMieterSessionToken(tenant.user.id);
-  const response = NextResponse.redirect(new URL("/mieter-app/dashboard", _request.url));
-  response.cookies.set(MIETER_SESSION_COOKIE, sessionToken, mieterSessionCookieOptions());
+
+  // Use a plain Response with a relative Location header so the browser
+  // stays on the correct public hostname (not Railway's internal localhost:8080)
+  const response = new Response(null, {
+    status: 302,
+    headers: { Location: "/mieter-app/dashboard" }
+  });
+  response.headers.set(
+    "Set-Cookie",
+    `${MIETER_SESSION_COOKIE}=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+  );
   return response;
 }
