@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantLeaseForm } from "@/components/mieter/tenant-lease-form";
@@ -17,6 +18,13 @@ type MieterDetailProps = {
 
 export default async function MieterDetailPage({ params }: MieterDetailProps) {
   const { id } = await params;
+
+  // Determine the public base URL from request headers (works on Railway + locally)
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "app.sanoa.tech";
+  const proto = hdrs.get("x-forwarded-proto")?.split(",")[0] ?? "https";
+  const baseUrl = `${proto}://${host}`;
+
   const tenant = await (db.tenant as any).findUnique({
     where: { id },
     include: {
@@ -66,6 +74,7 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
           <MieterQrForm
             tenantId={tenant.id}
             initialToken={tenant.magicToken ?? null}
+            baseUrl={baseUrl}
           />
         </div>
 

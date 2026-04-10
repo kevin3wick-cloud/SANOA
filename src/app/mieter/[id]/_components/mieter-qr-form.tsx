@@ -6,17 +6,13 @@ import { QrCode, RefreshCw } from "lucide-react";
 type Props = {
   tenantId: string;
   initialToken: string | null;
+  baseUrl: string;
 };
 
-export function MieterQrForm({ tenantId, initialToken }: Props) {
+export function MieterQrForm({ tenantId, initialToken, baseUrl }: Props) {
   const [token, setToken] = useState<string | null>(initialToken);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const baseUrl =
-    typeof window !== "undefined"
-      ? `${window.location.protocol}//${window.location.host}`
-      : "https://app.sanoa.tech";
 
   const magicUrl = token ? `${baseUrl}/api/mieter-app/magic-login/${token}` : null;
   const qrSrc = magicUrl
