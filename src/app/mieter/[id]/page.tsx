@@ -20,13 +20,15 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
   const { id } = await params;
 
   // Determine the public base URL:
-  // 1. NEXT_PUBLIC_APP_URL env var (set in Railway) – most reliable
-  // 2. x-forwarded-host from Railway's proxy
-  // 3. host header fallback
+  // 1. NEXT_PUBLIC_APP_URL env var (most reliable, set in Railway)
+  // 2. x-forwarded-host from Railway proxy headers
+  // 3. Hardcoded Railway URL as last fallback (never localhost)
   const hdrs = await headers();
-  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "sanoa-production.up.railway.app";
-  const proto = hdrs.get("x-forwarded-proto")?.split(",")[0] ?? "https";
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `${proto}://${host}`;
+  const forwardedHost = hdrs.get("x-forwarded-host");
+  const forwardedProto = hdrs.get("x-forwarded-proto")?.split(",")[0] ?? "https";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : "https://sanoa-production.up.railway.app");
 
   const tenant = await (db.tenant as any).findUnique({
     where: { id },
