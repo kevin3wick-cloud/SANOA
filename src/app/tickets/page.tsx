@@ -17,7 +17,7 @@ const boardInclude = {
   ...chatNotesInclude
 } as const;
 
-type FilterMode = "open" | "progress" | "all" | "assigned";
+type FilterMode = "open" | "progress" | "all" | "assigned" | "done" | "";
 
 export default async function TicketsPage({
   searchParams,
@@ -35,7 +35,7 @@ export default async function TicketsPage({
 
   const showOpen     = filter === "open"     || filter === "" || filter === "all";
   const showProgress = filter === "progress" || filter === "" || filter === "all";
-  const showDone     = filter === "all";
+  const showDone     = filter === "done"     || filter === "all";
   const showAssigned = filter === "assigned";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,18 +80,20 @@ export default async function TicketsPage({
   const assignedTickets = annotateTicketsForLandlordBoard(assignedRaw as any);
 
   const filterLabel =
-    filter === "open"     ? "Offene Tickets"        :
+    filter === "open"     ? "Offene Tickets"         :
     filter === "progress" ? "Tickets in Bearbeitung" :
-    filter === "all"      ? "Alle Tickets"           :
-    filter === "assigned" ? "Meine Tickets"          :
+    filter === "done"     ? "Abgeschlossene Tickets" :
+    filter === "all"      ? "Alle Tickets"            :
+    filter === "assigned" ? "Meine Tickets"           :
                             "Aktive Tickets";
 
   const filterTabs: { label: string; href: string; active: boolean }[] = [
-    { label: "Aktiv",              href: "/tickets",                  active: filter === "" },
-    { label: "Offen",              href: "/tickets?filter=open",      active: filter === "open" },
-    { label: "In Bearbeitung",     href: "/tickets?filter=progress",  active: filter === "progress" },
-    { label: "Zugewiesen",         href: "/tickets?filter=assigned",  active: filter === "assigned" },
-    { label: "Alle",               href: "/tickets?filter=all",       active: filter === "all" },
+    { label: "Aktiv",          href: "/tickets",                      active: filter === "" },
+    { label: "Offen",          href: "/tickets?filter=open",          active: filter === "open" },
+    { label: "In Bearbeitung", href: "/tickets?filter=progress",      active: filter === "progress" },
+    { label: "Zugewiesen",     href: "/tickets?filter=assigned",      active: filter === "assigned" },
+    { label: "Abgeschlossen",  href: "/tickets?filter=done",          active: filter === "done" },
+    { label: "Alle",           href: "/tickets?filter=all",           active: filter === "all" },
   ];
 
   return (

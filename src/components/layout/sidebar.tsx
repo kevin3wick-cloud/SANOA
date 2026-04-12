@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Archive,
   BarChart2,
   Building2,
   FileText,
@@ -18,7 +17,6 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Ticket },
-  { href: "/archiv", label: "Archiv", icon: Archive },
   { href: "/reporting", label: "Auswertung", icon: BarChart2 },
   { href: "/mieter", label: "Mieter", icon: Users },
   { href: "/dokumente", label: "Dokumente", icon: FileText },
