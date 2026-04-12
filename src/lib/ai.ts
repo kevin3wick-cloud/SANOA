@@ -7,7 +7,6 @@ function getClient(): Anthropic | null {
 
 /**
  * Detects whether a ticket is urgent based on description + category.
- * Returns false if AI is unavailable (no API key or error).
  */
 export async function detectUrgency(
   description: string,
@@ -45,7 +44,6 @@ Antworte NUR mit: JA oder NEIN`,
 
 /**
  * Analyzes a ticket photo and returns a short German description of the damage.
- * Returns empty string if AI is unavailable or image is too large.
  */
 export async function analyzeTicketPhoto(
   imageDataUrl: string
@@ -53,7 +51,6 @@ export async function analyzeTicketPhoto(
   const client = getClient();
   if (!client) return "";
 
-  // Parse data URL: data:<mimeType>;base64,<data>
   const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return "";
 
@@ -64,7 +61,6 @@ export async function analyzeTicketPhoto(
     | "image/gif";
   const base64Data = match[2];
 
-  // Anthropic image limit is ~5MB base64. Skip if too large.
   if (base64Data.length > 5_000_000) return "";
 
   try {
@@ -101,7 +97,49 @@ export async function analyzeTicketPhoto(
 }
 
 /**
- * Suggests a short landlord reply based on ticket context and chat history.
+ * Suggests what action the landlord should take for this ticket.
+ * E.g. "Klempner beauftragen und Terminvorschlag senden."
+ */
+export async function suggestTicketAction(
+  title: string,
+  description: string,
+  category: string,
+  location: string
+): Promise<string> {
+  const client = getClient();
+  if (!client) return "";
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 120,
+      messages: [
+        {
+          role: "user",
+          content: `Du bist Assistent einer Schweizer Immobilienverwaltung. Das System erlaubt dem Vermieter Terminvorschläge direkt im System zu senden – der Mieter muss sich nicht extra melden.
+
+Schlage in 1-2 Sätzen vor, was der Vermieter als nächsten Schritt tun soll.
+
+Ticket: ${title}
+Kategorie: ${category}
+Ort: ${location}
+Beschreibung: ${description}
+
+Sei konkret (z.B. Fachmann beauftragen, Schaden begutachten, Terminvorschlag im System senden). Schreibe NUR die Empfehlung ohne Einleitung. Auf Deutsch.`,
+        },
+      ],
+    });
+
+    return response.content[0].type === "text"
+      ? response.content[0].text.trim()
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Suggests a short landlord reply for the tenant chat.
  */
 export async function suggestLandlordReply(
   ticketTitle: string,
@@ -112,7 +150,7 @@ export async function suggestLandlordReply(
   if (!client) return "";
 
   const historyText = chatHistory
-    .slice(-6) // last 6 messages for context
+    .slice(-6)
     .map((n) => `${n.isTenantAuthor ? "Mieter" : "Vermieter"}: ${n.text}`)
     .join("\n");
 
@@ -124,6 +162,8 @@ export async function suggestLandlordReply(
         {
           role: "user",
           content: `Du bist Assistent eines Schweizer Vermieters. Formuliere eine kurze, professionelle und freundliche Antwort auf das Mieteranliegen.
+
+WICHTIG: Das System hat eine eingebaute Terminvorschlag-Funktion – der Vermieter kann direkt einen Termin im System vorschlagen. Sage dem Mieter NICHT, er solle die Verwaltung kontaktieren. Wenn ein Termin nötig ist, schreibe z.B. "Wir werden Ihnen einen Terminvorschlag über das System zukommen lassen."
 
 Ticket: ${ticketTitle}
 Beschreibung: ${description}

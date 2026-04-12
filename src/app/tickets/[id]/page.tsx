@@ -7,9 +7,11 @@ import { TicketActions } from "@/components/tickets/ticket-actions";
 import { TicketAppointmentLandlord } from "@/components/tickets/ticket-appointment-landlord";
 import { TicketAssign } from "@/components/tickets/ticket-assign";
 import { TicketTenantChat } from "@/components/tickets/ticket-tenant-chat";
+import { TicketAiAction } from "@/components/tickets/ticket-ai-action";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
+import { Mail, MapPin, User } from "lucide-react";
 
 type TicketDetailProps = {
   params: Promise<{ id: string }>;
@@ -21,7 +23,10 @@ function getStatusBadgeClass(status: TicketStatus) {
   return "status-badge status-done";
 }
 
-function getPriority(ticket: { category: TicketCategory; status: TicketStatus }) {
+function getPriority(ticket: { category: TicketCategory; status: TicketStatus; isUrgent: boolean }) {
+  if (ticket.isUrgent && ticket.status !== "DONE") {
+    return { label: "Dringend", className: "priority-badge priority-high" };
+  }
   if (ticket.category === "HEIZUNG" && ticket.status !== "DONE") {
     return { label: "Dringend", className: "priority-badge priority-high" };
   }
@@ -61,15 +66,11 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
   });
 
   const priority = getPriority(ticket);
+  const aiSummary = (ticket as { aiSummary?: string | null }).aiSummary;
+
   const historyItems = [
-    {
-      id: "created",
-      text: `Ticket erstellt am ${formatDate(ticket.createdAt)}`
-    },
-    {
-      id: "status-mock",
-      text: `Status aktuell: ${formatStatus(ticket.status)}`
-    }
+    { id: "created", text: `Ticket erstellt am ${formatDate(ticket.createdAt)}` },
+    { id: "status-mock", text: `Status aktuell: ${formatStatus(ticket.status)}` }
   ];
 
   const chatNotes = ticket.notes.map((note) => ({
@@ -84,89 +85,128 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
     <AppShell>
       <div className="grid ticket-detail-layout">
         <div className="stack">
+
+          {/* ── Header ── */}
           <div className="card ticket-header-card">
             <h1 className="ticket-title">{ticket.title}</h1>
-            <p className="muted">
-              Ticket #{ticket.id.slice(-6).toUpperCase()} - erstellt am{" "}
-              {formatDate(ticket.createdAt)}
-            </p>
             <div className="ticket-badges-row">
               <span className={getStatusBadgeClass(ticket.status)}>
                 {formatStatus(ticket.status)}
               </span>
               <span className={priority.className}>{priority.label}</span>
+              <span className="muted" style={{ fontSize: 12, marginLeft: "auto" }}>
+                #{ticket.id.slice(-6).toUpperCase()}
+              </span>
             </div>
           </div>
 
-          <div className="grid ticket-info-grid">
-            <div className="card stack">
-              <h3>Mieter</h3>
-              <p>
-                <strong>Name:</strong> {ticket.tenant.name}
-              </p>
-              <p>
-                <strong>Kontakt:</strong> {ticket.tenant.email} / {ticket.tenant.phone}
-              </p>
+          {/* ── Kompakte Info-Leiste ── */}
+          <div className="card" style={{ padding: "12px 16px" }}>
+            <div style={{
+              display: "flex", flexWrap: "wrap", gap: "8px 20px", fontSize: 13
+            }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <User size={13} strokeWidth={1.75} style={{ color: "var(--muted)", flexShrink: 0 }} />
+                <strong>{ticket.tenant.name}</strong>
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Mail size={13} strokeWidth={1.75} style={{ color: "var(--muted)", flexShrink: 0 }} />
+                <span className="muted">{ticket.tenant.email}</span>
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <MapPin size={13} strokeWidth={1.75} style={{ color: "var(--muted)", flexShrink: 0 }} />
+                <span className="muted">{ticket.tenant.apartment}</span>
+              </span>
+              <span className="muted" style={{ fontSize: 12, marginLeft: "auto", alignSelf: "center" }}>
+                {formatDate(ticket.createdAt)}
+              </span>
             </div>
-            <div className="card stack">
-              <h3>Objekt / Wohnung</h3>
-              <p>
-                <strong>Einheit:</strong> {ticket.tenant.apartment}
-              </p>
-              <p>
-                <strong>Ort des Problems:</strong> {ticket.location}
-              </p>
-            </div>
-            <div className="card stack">
-              <h3>Problem</h3>
-              <p>
-                <strong>Kategorie:</strong> {formatCategory(ticket.category)}
-              </p>
-              <p>
-                <strong>Beschreibung:</strong> {ticket.description}
-              </p>
-              {(ticket as { aiSummary?: string | null }).aiSummary ? (
-                <div style={{
-                  display: "flex",
-                  gap: 8,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "var(--accent-dim)",
-                  border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
-                }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>✨</span>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--accent)", lineHeight: 1.5 }}>
-                    {(ticket as { aiSummary?: string | null }).aiSummary}
+          </div>
+
+          {/* ── Bild + Problem nebeneinander ── */}
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
+              gap: 0,
+            }}>
+              {/* Bild */}
+              <div style={{
+                borderRight: "1px solid var(--border)",
+                background: "var(--surface)",
+                minHeight: 200,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                {ticket.imageUrl ? (
+                  <a href={`/api/tickets/${ticket.id}/image`} target="_blank" rel="noreferrer"
+                    style={{ display: "block", width: "100%" }}>
+                    <img
+                      src={`/api/tickets/${ticket.id}/image`}
+                      alt={`Ticketbild: ${ticket.title}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                        maxHeight: 320,
+                      }}
+                    />
+                  </a>
+                ) : (
+                  <div className="ticket-image-placeholder" style={{ margin: 16 }}>
+                    Kein Bild
+                  </div>
+                )}
+              </div>
+
+              {/* Problem-Details */}
+              <div className="stack" style={{ padding: "16px 18px", gap: 10 }}>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Kategorie
+                  </p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+                    {formatCategory(ticket.category)}
                   </p>
                 </div>
-              ) : null}
-            </div>
-            <div className="card stack">
-              <h3>Zeitliche Angaben</h3>
-              <p>
-                <strong>Erstellt:</strong> {formatDate(ticket.createdAt)}
-              </p>
-              <p>
-                <strong>Zuletzt aktualisiert:</strong> {formatDate(ticket.updatedAt)}
-              </p>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Ort
+                  </p>
+                  <p style={{ margin: 0, fontSize: 14 }}>{ticket.location}</p>
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Beschreibung
+                  </p>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
+                    {ticket.description}
+                  </p>
+                </div>
+
+                {/* AI Foto-Analyse */}
+                {aiSummary && (
+                  <div style={{
+                    display: "flex", gap: 8, padding: "9px 11px", borderRadius: 8,
+                    background: "var(--accent-dim)",
+                    border: "1px solid color-mix(in srgb, var(--accent) 25%, transparent)",
+                  }}>
+                    <span style={{ fontSize: 13, flexShrink: 0 }}>✨</span>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--accent)", lineHeight: 1.5 }}>
+                      {aiSummary}
+                    </p>
+                  </div>
+                )}
+
+                {/* AI Aktionsempfehlung */}
+                <TicketAiAction ticketId={ticket.id} />
+              </div>
             </div>
           </div>
 
-          <div className="card stack">
-            <h3>Hochgeladenes Bild</h3>
-            {ticket.imageUrl ? (
-              <a href={`/api/tickets/${ticket.id}/image`} target="_blank" rel="noreferrer">
-                <img
-                  src={`/api/tickets/${ticket.id}/image`}
-                  alt={`Ticketbild: ${ticket.title}`}
-                  className="ticket-image-preview"
-                />
-              </a>
-            ) : (
-              <div className="ticket-image-placeholder">Kein Bild vorhanden</div>
-            )}
-          </div>
-
+          {/* ── Chat ── */}
           <TicketTenantChat
             ticketId={ticket.id}
             tenantName={ticket.tenant.name}
@@ -175,6 +215,7 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
             notes={chatNotes}
           />
 
+          {/* ── Terminvorschläge ── */}
           <TicketAppointmentLandlord
             ticketId={ticket.id}
             proposals={ticket.appointmentProposals.map((p) => ({
@@ -186,6 +227,7 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
             }))}
           />
 
+          {/* ── Verlauf ── */}
           <div className="card">
             <h3>Verlauf</h3>
             <ul className="ticket-history-list">
@@ -195,6 +237,8 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
             </ul>
           </div>
         </div>
+
+        {/* ── Sidebar ── */}
         <div className="stack">
           <TicketActions ticketId={ticket.id} currentStatus={ticket.status} />
           <TicketAssign
