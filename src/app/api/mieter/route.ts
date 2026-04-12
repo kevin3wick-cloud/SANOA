@@ -70,16 +70,37 @@ export async function POST(request: NextRequest) {
   const archivedAt = archivedAtForLeaseEnd(leaseEnd);
 
   const existingUser = await db.user.findUnique({
-    where: { email: emailRaw }
+    where: { email: emailRaw },
+    include: { tenant: true }
   });
+
   if (existingUser) {
-    return NextResponse.json(
-      {
-        error:
-          "Diese E-Mail ist bereits vergeben (Vermieter- oder Mieter-Konto). Bitte andere E-Mail wählen."
-      },
-      { status: 409 }
-    );
+    const linkedTenant = (existingUser as any).tenant;
+
+    // Allow reactivation only if the linked tenant is archived
+    if (!linkedTenant || !linkedTenant.archivedAt) {
+      return NextResponse.json(
+        { error: "Diese E-Mail ist bereits vergeben (Vermieter- oder Mieter-Konto). Bitte andere E-Mail wählen." },
+        { status: 409 }
+      );
+    }
+
+    // Reactivate archived tenant
+    try {
+      await db.$transaction(async (tx) => {
+        await (tx.tenant as any).update({
+          where: { id: linkedTenant.id },
+          data: { name, email: emailRaw, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null }
+        });
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: { password, name }
+        });
+      });
+      return NextResponse.json({ id: linkedTenant.id }, { status: 201 });
+    } catch (e) {
+      throw e;
+    }
   }
 
   try {
