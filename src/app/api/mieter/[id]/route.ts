@@ -5,6 +5,7 @@ import {
   parseLeaseEndDateInput,
   parseOptionalDateInput
 } from "@/lib/tenant-lease";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 type PatchBody = {
   leaseStart?: string | null;
@@ -22,8 +23,14 @@ export async function PATCH(
   const { id } = await params;
   const body = (await request.json()) as PatchBody;
 
-  const tenant = await db.tenant.findUnique({ where: { id } });
-  if (!tenant) {
+  const currentUser = await getLandlordSessionUser();
+  if (!currentUser) {
+    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  }
+  const orgId = (currentUser as any).orgId ?? null;
+
+  const tenant = await (db.tenant as any).findUnique({ where: { id } });
+  if (!tenant || tenant.orgId !== orgId) {
     return NextResponse.json({ error: "Mieter nicht gefunden." }, { status: 404 });
   }
 
@@ -85,16 +92,22 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
 
-  const tenant = await db.tenant.findUnique({
+  const currentUser = await getLandlordSessionUser();
+  if (!currentUser) {
+    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  }
+  const orgId = (currentUser as any).orgId ?? null;
+
+  const tenant = await (db.tenant as any).findUnique({
     where: { id },
     include: { user: { select: { id: true } } }
   });
-  if (!tenant) {
+  if (!tenant || tenant.orgId !== orgId) {
     return NextResponse.json({ error: "Mieter nicht gefunden." }, { status: 404 });
   }
 

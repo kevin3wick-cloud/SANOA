@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { DocumentKind, DocumentVisibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { putObject } from "@/lib/r2";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,13 @@ function parseDocumentKind(value: FormDataEntryValue | null): DocumentKind {
 }
 
 export async function POST(request: NextRequest) {
+  // Require a valid landlord session
+  const currentUser = await getLandlordSessionUser();
+  if (!currentUser) {
+    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+  }
+  const orgId = (currentUser as any).orgId ?? null;
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -87,8 +95,9 @@ export async function POST(request: NextRequest) {
   const tenantRaw = formData.get("tenantId");
   let tenantId: string | null = null;
   if (typeof tenantRaw === "string" && tenantRaw.trim().length > 0) {
-    const tenant = await db.tenant.findUnique({ where: { id: tenantRaw.trim() } });
-    if (!tenant) {
+    const tenant = await (db.tenant as any).findUnique({ where: { id: tenantRaw.trim() } });
+    // Verify tenant exists, is not archived, and belongs to the same org
+    if (!tenant || tenant.archivedAt || tenant.orgId !== orgId) {
       return NextResponse.json({ error: "Mieter nicht gefunden." }, { status: 400 });
     }
     tenantId = tenant.id;
@@ -118,6 +127,7 @@ export async function POST(request: NextRequest) {
       fileUrl: r2Key,   // R2 object key, not a public URL
       visibility: visibilityRaw,
       kind,
+      orgId,
       tenantId
     }
   });

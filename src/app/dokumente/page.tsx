@@ -5,15 +5,20 @@ import { AppShell } from "@/components/layout/app-shell";
 import { DocumentUploadForm } from "@/components/ui/document-upload-form";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 export default async function DokumentePage() {
+  const user = await getLandlordSessionUser();
+  const orgId = (user as any)?.orgId ?? null;
+
   const [documents, tenants] = await Promise.all([
     db.document.findMany({
+      where: { orgId },
       include: { tenant: true },
       orderBy: { createdAt: "desc" }
     }),
     (db.tenant as any).findMany({
-      where: { archivedAt: null },
+      where: { archivedAt: null, orgId },
       select: { id: true, name: true },
       orderBy: { name: "asc" }
     })

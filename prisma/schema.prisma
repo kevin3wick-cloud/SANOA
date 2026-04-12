@@ -141,6 +141,7 @@ model Document {
   fileUrl            String
   visibility         DocumentVisibility @default(INTERNAL)
   kind               DocumentKind       @default(SONSTIGES)
+  orgId              String?
   tenantId           String?
   tenant             Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   archivedAt         DateTime?
