@@ -140,9 +140,9 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
           <div className="card stack">
             <h3>Hochgeladenes Bild</h3>
             {ticket.imageUrl ? (
-              <a href={ticket.imageUrl} target="_blank" rel="noreferrer">
+              <a href={`/api/tickets/${ticket.id}/image`} target="_blank" rel="noreferrer">
                 <img
-                  src={ticket.imageUrl}
+                  src={`/api/tickets/${ticket.id}/image`}
                   alt={`Ticketbild: ${ticket.title}`}
                   className="ticket-image-preview"
                 />

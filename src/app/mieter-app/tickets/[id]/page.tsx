@@ -116,9 +116,9 @@ export default async function MieterTicketDetailPage({ params }: PageProps) {
           <div className="card stack">
             <h3 style={{ margin: 0 }}>Foto</h3>
             {ticket.imageUrl ? (
-              <a href={ticket.imageUrl} target="_blank" rel="noreferrer">
+              <a href={`/api/tickets/${ticket.id}/image`} target="_blank" rel="noreferrer">
                 <img
-                  src={ticket.imageUrl}
+                  src={`/api/tickets/${ticket.id}/image`}
                   alt=""
                   className="ticket-image-preview"
                 />
