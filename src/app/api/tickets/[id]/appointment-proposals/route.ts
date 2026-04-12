@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AppointmentProposalStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sendPushToTenant } from "@/lib/push";
+import { sendEmail, newAppointmentEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,10 @@ export async function POST(
     );
   }
 
-  const ticket = await db.ticket.findUnique({ where: { id: ticketId } });
+  const ticket = await db.ticket.findUnique({
+    where: { id: ticketId },
+    include: { tenant: { select: { name: true, email: true } } }
+  });
   if (!ticket) {
     return NextResponse.json({ error: "Ticket nicht gefunden." }, { status: 404 });
   }
@@ -53,12 +57,24 @@ export async function POST(
     });
   });
 
-  // Push notification to tenant
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "https://sanoa-production.up.railway.app";
+  const ticketUrl = `${baseUrl}/mieter-app/tickets/${ticketId}`;
+
   sendPushToTenant(ticket.tenantId, {
     title: "Neuer Terminvorschlag",
     body: message.slice(0, 100),
     url: `/mieter-app/tickets/${ticketId}`
   }).catch(() => {});
+
+  if (ticket.tenant?.email) {
+    sendEmail(newAppointmentEmail({
+      tenantName: ticket.tenant.name,
+      tenantEmail: ticket.tenant.email,
+      ticketTitle: ticket.title,
+      message: message.slice(0, 300),
+      ticketUrl
+    })).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

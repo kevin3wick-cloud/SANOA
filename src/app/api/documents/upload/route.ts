@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { putObject } from "@/lib/r2";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { sendPushToTenant } from "@/lib/push";
+import { sendEmail, newDocumentEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -147,13 +148,29 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Push notification to tenant when a visible document is assigned to them
+  // Push + E-Mail notification when a visible document is assigned to a specific tenant
   if (visibilityRaw === "TENANT_VISIBLE" && tenantId) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "https://sanoa-production.up.railway.app";
+
     sendPushToTenant(tenantId, {
       title: "Neues Dokument",
       body: `Die Verwaltung hat „${displayName.slice(0, 60)}" hochgeladen.`,
       url: "/mieter-app/dashboard"
     }).catch(() => {});
+
+    // Fetch tenant email for the e-mail notification
+    const tenantForEmail = await (db.tenant as any).findUnique({
+      where: { id: tenantId },
+      select: { name: true, email: true }
+    });
+    if (tenantForEmail?.email) {
+      sendEmail(newDocumentEmail({
+        tenantName: tenantForEmail.name,
+        tenantEmail: tenantForEmail.email,
+        documentName: displayName,
+        dashboardUrl: `${baseUrl}/mieter-app/dashboard`
+      })).catch(() => {});
+    }
   }
 
   return NextResponse.json(
