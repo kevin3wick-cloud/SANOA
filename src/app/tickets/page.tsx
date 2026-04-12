@@ -41,6 +41,12 @@ export default async function TicketsPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const assignedWhere = { assignedToId: user?.id, status: { not: TicketStatus.DONE }, ...(orgWhere as any) };
 
+  const teamMembers = await db.user.findMany({
+    where: { role: "LANDLORD", orgId: orgId ?? "__none__" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
   const [openRaw, progressRaw, doneRaw, assignedRaw] = await Promise.all([
     showOpen
       ? db.ticket.findMany({
@@ -130,6 +136,7 @@ export default async function TicketsPage({
             title="Offen"
             tone="open"
             tickets={openTickets}
+            teamMembers={teamMembers}
           />
         )}
         {showProgress && (
@@ -137,6 +144,7 @@ export default async function TicketsPage({
             title="In Bearbeitung"
             tone="progress"
             tickets={progressTickets}
+            teamMembers={teamMembers}
           />
         )}
         {showDone && (
@@ -144,6 +152,7 @@ export default async function TicketsPage({
             title="Erledigt"
             tone="done"
             tickets={doneTickets}
+            teamMembers={teamMembers}
           />
         )}
         {showAssigned && (
@@ -156,6 +165,7 @@ export default async function TicketsPage({
               title="Mir zugewiesen"
               tone="progress"
               tickets={assignedTickets}
+              teamMembers={teamMembers}
             />
           )
         )}

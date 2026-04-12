@@ -6,6 +6,69 @@ import { useMemo, useState } from "react";
 import { formatCategory, formatDate } from "@/lib/format";
 import type { TicketWithTenantAndUnread } from "@/lib/ticket-board-rows";
 
+type TeamMember = { id: string; name: string };
+
+function InlineAssign({ ticketId, assignedToId, teamMembers }: {
+  ticketId: string;
+  assignedToId: string | null;
+  teamMembers: TeamMember[];
+}) {
+  const [value, setValue] = useState(assignedToId ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function assign(newId: string) {
+    setValue(newId);
+    setSaving(true);
+    try {
+      await fetch(`/api/tickets/${ticketId}/assign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignedToId: newId || null }),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const name = teamMembers.find((m) => m.id === value)?.name;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      {value && name && (
+        <div style={{
+          width: 22, height: 22, borderRadius: "50%",
+          background: "var(--accent)", color: "#fff",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontWeight: 700, flexShrink: 0,
+        }}>
+          {name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <select
+        value={value}
+        onChange={(e) => void assign(e.target.value)}
+        disabled={saving}
+        style={{
+          fontSize: 12,
+          padding: "3px 6px",
+          borderRadius: 6,
+          border: "1px solid var(--border)",
+          background: "var(--surface)",
+          color: value ? "var(--text)" : "var(--muted)",
+          cursor: "pointer",
+          maxWidth: 130,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <option value="">— Niemand —</option>
+        {teamMembers.map((m) => (
+          <option key={m.id} value={m.id}>{m.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 type FilterValues = {
   title: string;
   tenantName: string;
@@ -60,9 +123,9 @@ export type TicketsBoardTone = "open" | "progress" | "done";
 type TicketsBoardSectionProps = {
   id?: string;
   title: string;
-  /** Farbakzent für die Spalten-Überschrift (Offen / In Bearbeitung / Erledigt). */
   tone?: TicketsBoardTone;
   tickets: TicketWithTenantAndUnread[];
+  teamMembers?: TeamMember[];
 };
 
 function sectionToneClass(tone: TicketsBoardTone | undefined) {
@@ -70,7 +133,7 @@ function sectionToneClass(tone: TicketsBoardTone | undefined) {
   return `tickets-board-section--${tone}`;
 }
 
-export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSectionProps) {
+export function TicketsBoardSection({ id, title, tone, tickets, teamMembers = [] }: TicketsBoardSectionProps) {
   const [titleQ, setTitleQ] = useState("");
   const [tenantName, setTenantName] = useState("");
   const [apartment, setApartment] = useState("");
@@ -248,11 +311,17 @@ export function TicketsBoardSection({ id, title, tone, tickets }: TicketsBoardSe
                   <td>{ticket.tenant.apartment}</td>
                   <td>{formatCategory(ticket.category)}</td>
                   <td>
-                    {ticket.assignedTo ? (
+                    {teamMembers.length > 0 ? (
+                      <InlineAssign
+                        ticketId={ticket.id}
+                        assignedToId={ticket.assignedTo?.id ?? null}
+                        teamMembers={teamMembers}
+                      />
+                    ) : ticket.assignedTo ? (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                         <span style={{
                           width: 22, height: 22, borderRadius: "50%",
-                          background: "var(--accent, #2563eb)", color: "#fff",
+                          background: "var(--accent)", color: "#fff",
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
                           fontSize: 11, fontWeight: 700, flexShrink: 0,
                         }}>

@@ -3,9 +3,8 @@ export const dynamic = 'force-dynamic';
 import { notFound } from "next/navigation";
 import { TicketCategory, TicketStatus } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
-import { TicketActions } from "@/components/tickets/ticket-actions";
+import { TicketSidebar } from "@/components/tickets/ticket-sidebar";
 import { TicketAppointmentLandlord } from "@/components/tickets/ticket-appointment-landlord";
-import { TicketAssign } from "@/components/tickets/ticket-assign";
 import { TicketTenantChat } from "@/components/tickets/ticket-tenant-chat";
 import { TicketAiAction } from "@/components/tickets/ticket-ai-action";
 import { db } from "@/lib/db";
@@ -240,9 +239,9 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
 
         {/* ── Sidebar ── */}
         <div className="stack">
-          <TicketActions ticketId={ticket.id} currentStatus={ticket.status} />
-          <TicketAssign
+          <TicketSidebar
             ticketId={ticket.id}
+            currentStatus={ticket.status}
             assignedToId={ticket.assignedTo?.id ?? null}
             assignedToName={ticket.assignedTo?.name ?? null}
             teamMembers={teamMembers}
