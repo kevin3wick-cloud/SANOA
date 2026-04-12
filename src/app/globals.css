@@ -1,22 +1,22 @@
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #07080c;
-  --bg-elevated: #0c0f14;
-  --surface: #11141b;
-  --surface-hover: #171b24;
-  --border: #252b36;
-  --border-subtle: #1a1f28;
+  --bg: #06070f;
+  --bg-elevated: #0a0b12;
+  --surface: #0e0f18;
+  --surface-hover: #13141f;
+  --border: #1f2130;
+  --border-subtle: #171826;
   --text: #e8eaef;
   --muted: #8b93a3;
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-dim: rgba(129, 140, 248, 0.14);
-  --sidebar-bg: #0a0c11;
-  --sidebar-border: #1c212c;
-  --topbar-bg: rgba(12, 14, 18, 0.72);
-  --input-bg: #0d1016;
-  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 20px 50px rgba(0, 0, 0, 0.45);
+  --accent: #7c8ef5;
+  --accent-hover: #9aaaf7;
+  --accent-dim: rgba(124, 142, 245, 0.13);
+  --sidebar-bg: #07080f;
+  --sidebar-border: #181926;
+  --topbar-bg: rgba(6, 7, 15, 0.82);
+  --input-bg: #0a0b14;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 20px 50px rgba(0, 0, 0, 0.5);
   --radius: 14px;
   --radius-sm: 10px;
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
@@ -85,12 +85,12 @@ a:not(.nav-link):hover {
   min-width: 0;
   background: radial-gradient(
       1200px 600px at 10% -10%,
-      rgba(129, 140, 248, 0.08),
+      rgba(124, 142, 245, 0.07),
       transparent 55%
     ),
     radial-gradient(
       900px 500px at 100% 0%,
-      rgba(56, 189, 248, 0.06),
+      rgba(124, 142, 245, 0.04),
       transparent 50%
     ),
     var(--bg);
@@ -447,18 +447,18 @@ button.secondary-button:hover {
 }
 
 .stat-icon-open {
-  background: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
+  background: rgba(234, 179, 8, 0.12);
+  color: #c9a43a;
 }
 
 .stat-icon-progress {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
+  background: rgba(124, 142, 245, 0.14);
+  color: #7c8ef5;
 }
 
 .stat-icon-done {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  background: rgba(20, 184, 166, 0.12);
+  color: #2ea89a;
 }
 
 .stat-icon-total {
@@ -569,14 +569,14 @@ button.secondary-button:hover {
 }
 
 .dashboard-hint-warning {
-  background: rgba(251, 146, 60, 0.12);
-  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(160, 120, 48, 0.10);
+  border: 1px solid rgba(160, 120, 48, 0.28);
   color: var(--text);
 }
 
 .dashboard-hint-warning svg {
   flex-shrink: 0;
-  color: #fb923c;
+  color: #c9a43a;
   margin-top: 2px;
 }
 
@@ -635,11 +635,11 @@ button.secondary-button:hover {
 }
 
 .dashboard-row-urgent {
-  box-shadow: inset 3px 0 0 #f87171;
+  box-shadow: inset 3px 0 0 #a05050;
 }
 
 .dashboard-row-urgent td {
-  background: rgba(248, 113, 113, 0.06);
+  background: rgba(160, 80, 80, 0.06);
 }
 
 .tickets-filter-banner {
@@ -683,28 +683,28 @@ button.secondary-button:hover {
 }
 
 .tickets-board-section--open {
-  border-left: 4px solid #fb923c;
+  border-left: 4px solid #a07830;
   background: linear-gradient(
     90deg,
-    rgba(251, 146, 60, 0.08) 0%,
+    rgba(160, 120, 48, 0.08) 0%,
     transparent 48%
   );
 }
 
 .tickets-board-section--progress {
-  border-left: 4px solid #60a5fa;
+  border-left: 4px solid #7c8ef5;
   background: linear-gradient(
     90deg,
-    rgba(96, 165, 250, 0.08) 0%,
+    rgba(124, 142, 245, 0.07) 0%,
     transparent 48%
   );
 }
 
 .tickets-board-section--done {
-  border-left: 4px solid #34d399;
+  border-left: 4px solid #2ea89a;
   background: linear-gradient(
     90deg,
-    rgba(52, 211, 153, 0.08) 0%,
+    rgba(46, 168, 154, 0.07) 0%,
     transparent 48%
   );
 }
@@ -886,7 +886,7 @@ button.btn-inline {
   overflow: hidden;
   background: radial-gradient(
       800px 400px at 50% -20%,
-      rgba(129, 140, 248, 0.2),
+      rgba(124, 142, 245, 0.16),
       transparent 60%
     ),
     var(--bg);
@@ -956,23 +956,23 @@ button.btn-inline {
 }
 
 .status-open {
-  background: rgba(251, 146, 60, 0.18);
-  color: #fdba74;
+  background: rgba(160, 120, 48, 0.15);
+  color: #c9a43a;
 }
 
 .status-progress {
-  background: rgba(96, 165, 250, 0.18);
-  color: #93c5fd;
+  background: rgba(124, 142, 245, 0.15);
+  color: #7c8ef5;
 }
 
 .status-done {
-  background: rgba(52, 211, 153, 0.18);
-  color: #6ee7b7;
+  background: rgba(46, 168, 154, 0.15);
+  color: #2ea89a;
 }
 
 .priority-high {
-  background: rgba(248, 113, 113, 0.16);
-  color: #fca5a5;
+  background: rgba(220, 80, 80, 0.13);
+  color: #c97070;
 }
 
 .priority-normal {
@@ -1058,7 +1058,7 @@ button.btn-inline {
 
 .ticket-chat-bubble--landlord {
   align-self: flex-end;
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #5460c8 0%, #7c8ef5 100%);
   color: #f8fafc;
   border: 1px solid transparent;
 }
