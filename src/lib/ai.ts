@@ -22,9 +22,26 @@ export async function detectUrgency(
       messages: [
         {
           role: "user",
-          content: `Du bist Assistent einer Immobilienverwaltung. Beurteile ob diese Schadensmeldung DRINGEND ist.
+          content: `Du bist Assistent einer Immobilienverwaltung in der Schweiz. Beurteile ob diese Schadensmeldung DRINGEND ist.
 
-Dringend = sofortiger Handlungsbedarf: Wasserrohrbruch, Gasgeruch, Stromausfall, Heizungsausfall im Winter, Feuer, Sicherheitsrisiko, überschwemmte Räume.
+DRINGEND = sofortiger Handlungsbedarf, eines dieser Kriterien muss zutreffen:
+- Wasser: Rohrbruch, Überschwemmung, unkontrollierter Wasseraustritt, kein Wasser überhaupt
+- Gas: Gasgeruch, Gasleck (immer höchste Priorität)
+- Strom: Kompletter Stromausfall in der Wohnung, Kurzschluss mit Brandgefahr, blanke Kabel
+- Heizung: Totalausfall der Heizung (besonders Oktober–März), kein Warmwasser seit mehr als 1 Tag
+- Sicherheit: Einbruch, Tür/Schloss defekt und Wohnung nicht sicherbar, Feuer- oder Rauchschaden
+- Gesundheit: Grossflächiger Schimmel (mehr als ca. 30x30cm), starker Schimmelgeruch
+- Aufzug: Defekt wenn Mieter auf Rollstuhl oder Gehhilfe angewiesen (erkennbar an Erwähnung)
+- Kühlschrank/Gefriergerät: Komplett defekt (Lebensmittelverderb)
+- Fenster/Balkontür: Lässt sich nicht schliessen oder sperren (Sicherheitsrisiko)
+
+NICHT dringend (normale Priorität):
+- Kosmetische Schäden (Risse, abgeblätterte Farbe, kleine Kratzer)
+- Einzelne defekte Steckdose oder Glühbirne
+- Leicht tropfender Wasserhahn
+- Kleiner Schimmelfleck unter 30x30cm
+- Heizung funktioniert, ist aber schwächer als normal
+- Allgemeine Reinigung oder Pflege
 
 Kategorie: ${category}
 Beschreibung: ${description}
