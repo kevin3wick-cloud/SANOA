@@ -9,6 +9,7 @@ import { TicketAssign } from "@/components/tickets/ticket-assign";
 import { TicketTenantChat } from "@/components/tickets/ticket-tenant-chat";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 
 type TicketDetailProps = {
   params: Promise<{ id: string }>;
@@ -40,8 +41,9 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
     },
   });
 
+  const currentUser = await getLandlordSessionUser();
   const teamMembers = await db.user.findMany({
-    where: { role: "LANDLORD" },
+    where: { role: "LANDLORD", orgId: currentUser?.orgId ?? "__none__" },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
