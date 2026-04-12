@@ -145,20 +145,32 @@ export function MieterAppointmentPanel({
             <span className="muted">Vorschlag vom {formatDate(new Date(pendingProposal.createdAt))}:</span>
           </p>
           <p style={{ margin: 0 }}>{pendingProposal.message}</p>
-          <div className="inline-action-buttons">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button
               type="button"
-              className="btn-inline"
               disabled={busy}
               onClick={() => respond(pendingProposal.id, "confirm")}
+              style={{ width: "100%" }}
             >
               Bestätigen
             </button>
             <button
               type="button"
-              className="secondary-button btn-inline"
               disabled={busy}
               onClick={() => respond(pendingProposal.id, "reject")}
+              style={{
+                width: "100%",
+                background: "transparent",
+                color: "#f87171",
+                border: "1px solid rgba(248,113,113,0.4)",
+                borderRadius: "var(--radius-sm)",
+                padding: "10px 16px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: busy ? "not-allowed" : "pointer",
+                opacity: busy ? 0.5 : 1,
+                transition: "background 0.15s",
+              }}
             >
               Ablehnen
             </button>

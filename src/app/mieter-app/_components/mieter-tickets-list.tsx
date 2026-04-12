@@ -104,21 +104,38 @@ export function MieterTicketsList({ limit, title = "Deine Tickets", statusFilter
                   style={{
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "space-between",
                     gap: 8,
-                    flexWrap: "wrap",
                     marginBottom: 6
                   }}
                 >
                   <Link
                     href={`/mieter-app/tickets/${t.id}`}
                     className="dashboard-ticket-title-link"
-                    style={{ display: "inline" }}
+                    style={{ display: "inline", flex: 1 }}
                   >
                     {t.title}
                   </Link>
                   {t.unreadFromLandlord ? (
-                    <span className="chat-unread-badge" title="Neue Nachricht der Verwaltung">
-                      Verwaltung
+                    <span
+                      title="Neue Nachricht der Verwaltung"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 22,
+                        height: 22,
+                        padding: "0 6px",
+                        borderRadius: 999,
+                        background: "#f87171",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        lineHeight: 1,
+                      }}
+                    >
+                      1
                     </span>
                   ) : null}
                 </div>
