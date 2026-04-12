@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AppointmentProposalStatus } from "@prisma/client";
 import { db } from "@/lib/db";
+import { sendPushToTenant } from "@/lib/push";
+
+export const runtime = "nodejs";
 
 type Body = {
   message?: string;
@@ -49,6 +52,13 @@ export async function POST(
       }
     });
   });
+
+  // Push notification to tenant
+  sendPushToTenant(ticket.tenantId, {
+    title: "Neuer Terminvorschlag",
+    body: message.slice(0, 100),
+    url: `/mieter-app/tickets/${ticketId}`
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

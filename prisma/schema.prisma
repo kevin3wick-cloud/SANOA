@@ -82,9 +82,10 @@ model Tenant {
   orgId       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  tickets     Ticket[]
-  documents   Document[]
-  user        User?
+  tickets           Ticket[]
+  documents         Document[]
+  pushSubscriptions PushSubscription[]
+  user              User?
 }
 
 model Ticket {
@@ -132,6 +133,16 @@ model TicketNote {
   isInternal       Boolean  @default(true)
   isTenantAuthor   Boolean  @default(false)
   createdAt        DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model Document {

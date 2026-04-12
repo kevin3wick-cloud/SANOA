@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendPushToTenant } from "@/lib/push";
+
+export const runtime = "nodejs";
 
 type NoteBody = {
   text?: string;
@@ -20,13 +23,29 @@ export async function POST(
     );
   }
 
+  const isInternal = body.isInternal ?? true;
+
+  const ticket = await db.ticket.findUnique({
+    where: { id },
+    select: { tenantId: true, title: true }
+  });
+
   await db.ticketNote.create({
     data: {
       ticketId: id,
       text: body.text.trim(),
-      isInternal: body.isInternal ?? true
+      isInternal
     }
   });
+
+  // Push notification to tenant when landlord sends a visible message
+  if (!isInternal && ticket?.tenantId) {
+    sendPushToTenant(ticket.tenantId, {
+      title: "Neue Nachricht",
+      body: `Verwaltung: ${body.text.trim().slice(0, 80)}`,
+      url: `/mieter-app/tickets/${id}`
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -9,6 +9,7 @@ import { MieterDocumentsPanel } from "../_components/mieter-documents-panel";
 import { MieterNav } from "../_components/mieter-nav";
 import { MieterTicketsList } from "../_components/mieter-tickets-list";
 import { MieterTopBar } from "../_components/mieter-top-bar";
+import { PushPermissionBanner } from "../_components/push-permission-banner";
 
 export default async function MieterDashboardPage() {
   const user = await requireMieterSession();
@@ -75,6 +76,7 @@ export default async function MieterDashboardPage() {
               </span>
             </div>
           ) : null}
+          <PushPermissionBanner />
           <MieterDocumentsPanel />
           <MieterTicketsList limit={5} title="Letzte Tickets" />
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>

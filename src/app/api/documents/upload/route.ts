@@ -4,6 +4,7 @@ import { DocumentKind, DocumentVisibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { putObject } from "@/lib/r2";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
+import { sendPushToTenant } from "@/lib/push";
 
 export const runtime = "nodejs";
 
@@ -144,6 +145,15 @@ export async function POST(request: NextRequest) {
       },
       data: { archivedAt: now }
     });
+  }
+
+  // Push notification to tenant when a visible document is assigned to them
+  if (visibilityRaw === "TENANT_VISIBLE" && tenantId) {
+    sendPushToTenant(tenantId, {
+      title: "Neues Dokument",
+      body: `Die Verwaltung hat „${displayName.slice(0, 60)}" hochgeladen.`,
+      url: "/mieter-app/dashboard"
+    }).catch(() => {});
   }
 
   return NextResponse.json(
