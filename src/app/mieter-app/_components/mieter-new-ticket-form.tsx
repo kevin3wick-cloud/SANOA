@@ -353,7 +353,6 @@ export function MieterNewTicketForm() {
               id="mieter-photo"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
-              capture="environment"
               disabled={pending}
               required
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
