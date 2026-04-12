@@ -80,16 +80,44 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // Check for duplicate email
-    const existing = await db.user.findUnique({ where: { email } });
-    if (existing) {
-      results.push({ row: rowNum, name, ok: false, error: `E-Mail «${email}» ist bereits vergeben.` });
+    // Check for existing user with this email
+    const existingUser = await db.user.findUnique({
+      where: { email },
+      include: { tenant: true }
+    });
+
+    const archivedAt = archivedAtForLeaseEnd(leaseEnd);
+
+    if (existingUser) {
+      // Only allow re-import if the linked tenant is archived (lease ended / manually archived)
+      const linkedTenant = (existingUser as any).tenant;
+      if (!linkedTenant || !linkedTenant.archivedAt) {
+        results.push({ row: rowNum, name, ok: false, error: `E-Mail «${email}» gehört bereits einem aktiven Mieter.` });
+        continue;
+      }
+
+      // Reactivate: update existing tenant + user with new data
+      try {
+        await db.$transaction(async (tx) => {
+          await (tx.tenant as any).update({
+            where: { id: linkedTenant.id },
+            data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null }
+          });
+          await tx.user.update({
+            where: { id: existingUser.id },
+            data: { password, name }
+          });
+        });
+        results.push({ row: rowNum, name, ok: true });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        results.push({ row: rowNum, name, ok: false, error: msg || "Datenbankfehler." });
+      }
       continue;
     }
 
-    // Create tenant + user
+    // No existing user → create new tenant + user
     try {
-      const archivedAt = archivedAtForLeaseEnd(leaseEnd);
       await db.$transaction(async (tx) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tenant = await (tx.tenant as any).create({
