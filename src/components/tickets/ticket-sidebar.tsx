@@ -26,31 +26,34 @@ export function TicketSidebar({
   assignedToName,
   teamMembers,
 }: Props) {
-  const [status, setStatus]       = useState<TicketStatus>(currentStatus);
-  const [assignId, setAssignId]   = useState<string>(assignedToId ?? "");
-  const [saving, setSaving]       = useState(false);
-  const [feedback, setFeedback]   = useState("");
+  const [status, setStatus]     = useState<TicketStatus>(currentStatus);
+  const [assignId, setAssignId] = useState<string>(assignedToId ?? "");
+  const [saving, setSaving]     = useState(false);
 
-  async function save() {
+  async function saveStatus(next: TicketStatus) {
+    setStatus(next);
     setSaving(true);
-    setFeedback("");
     try {
-      // save status
       await fetch(`/api/tickets/${ticketId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: next }),
       });
-      // save assignment
+      setTimeout(() => window.location.reload(), 300);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveAssign(newId: string) {
+    setAssignId(newId);
+    setSaving(true);
+    try {
       await fetch(`/api/tickets/${ticketId}/assign`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedToId: assignId || null }),
+        body: JSON.stringify({ assignedToId: newId || null }),
       });
-      setFeedback("Gespeichert");
-      setTimeout(() => window.location.reload(), 400);
-    } catch {
-      setFeedback("Fehler beim Speichern.");
     } finally {
       setSaving(false);
     }
@@ -63,14 +66,15 @@ export function TicketSidebar({
       {/* Status */}
       <div>
         <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Status
+          Status {saving && <span style={{ fontWeight: 400, opacity: 0.5 }}>·  wird gespeichert…</span>}
         </p>
         <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
-              onClick={() => setStatus(opt.value as TicketStatus)}
+              disabled={saving}
+              onClick={() => void saveStatus(opt.value as TicketStatus)}
               style={{
                 width: "100%",
                 padding: "7px 12px",
@@ -82,7 +86,7 @@ export function TicketSidebar({
                 fontWeight: status === opt.value ? 700 : 400,
                 fontSize: 13,
                 textAlign: "left",
-                cursor: "pointer",
+                cursor: saving ? "wait" : "pointer",
                 transition: "border-color 0.1s, background 0.1s",
               }}
             >
@@ -117,7 +121,8 @@ export function TicketSidebar({
         )}
         <select
           value={assignId}
-          onChange={(e) => setAssignId(e.target.value)}
+          disabled={saving}
+          onChange={(e) => void saveAssign(e.target.value)}
           style={{ fontSize: 13, width: "100%" }}
         >
           <option value="">— Niemand —</option>
@@ -126,22 +131,6 @@ export function TicketSidebar({
           ))}
         </select>
       </div>
-
-      {/* Save button */}
-      <button
-        type="button"
-        onClick={save}
-        disabled={saving}
-        style={{ width: "100%" }}
-      >
-        {saving ? "Speichern…" : "Speichern"}
-      </button>
-
-      {feedback && (
-        <p style={{ margin: 0, fontSize: 12, color: feedback === "Gespeichert" ? "var(--accent)" : "#f87171", textAlign: "center" }}>
-          {feedback}
-        </p>
-      )}
     </div>
   );
 }
