@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Sparkles } from "lucide-react";
 
 type Note = {
   id: string;
@@ -29,6 +30,7 @@ export function TicketTenantChat({
   const [internalNote, setInternalNote] = useState("");
   const [showInternal, setShowInternal] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   const sorted = [...notes].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -57,6 +59,26 @@ export function TicketTenantChat({
     setMessage("");
     setFeedback("");
     window.location.reload();
+  }
+
+  async function loadAiSuggestion() {
+    setAiLoading(true);
+    setFeedback("");
+    try {
+      const res = await fetch(`/api/tickets/${ticketId}/ai-suggest`, {
+        method: "POST",
+      });
+      const data = (await res.json()) as { suggestion?: string; error?: string };
+      if (!res.ok || !data.suggestion) {
+        setFeedback(data.error ?? "KI-Vorschlag nicht verfügbar.");
+        return;
+      }
+      setMessage(data.suggestion);
+    } catch {
+      setFeedback("Netzwerkfehler beim KI-Vorschlag.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   async function saveInternal(event: FormEvent<HTMLFormElement>) {
@@ -133,9 +155,34 @@ export function TicketTenantChat({
       </div>
 
       <form className="ticket-chat-compose stack" onSubmit={sendToTenant}>
-        <label className="muted" htmlFor="tenant-message">
-          Nachricht an {tenantName}
-        </label>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <label className="muted" htmlFor="tenant-message">
+            Nachricht an {tenantName}
+          </label>
+          <button
+            type="button"
+            onClick={loadAiSuggestion}
+            disabled={aiLoading}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 600,
+              padding: "4px 10px",
+              borderRadius: 999,
+              border: "1px solid var(--accent)",
+              background: "var(--accent-dim)",
+              color: "var(--accent)",
+              cursor: aiLoading ? "wait" : "pointer",
+              opacity: aiLoading ? 0.6 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            <Sparkles size={13} strokeWidth={2} />
+            {aiLoading ? "KI lädt…" : "KI-Vorschlag"}
+          </button>
+        </div>
         <textarea
           id="tenant-message"
           value={message}

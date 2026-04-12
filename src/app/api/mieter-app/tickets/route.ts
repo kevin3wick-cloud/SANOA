@@ -4,6 +4,7 @@ import { formatCategory } from "@/lib/format";
 import { hasUnreadFromLandlordForTenant } from "@/lib/ticket-chat-read";
 import { getMieterSessionUser } from "@/lib/tenant-auth";
 import { db } from "@/lib/db";
+import { detectUrgency, analyzeTicketPhoto } from "@/lib/ai";
 import { isTicketCategory } from "@/mieter-app/options";
 
 export const runtime = "nodejs";
@@ -159,6 +160,23 @@ export async function POST(request: NextRequest) {
       imageUrl
     }
   });
+
+  // AI enrichment: run urgency detection + photo analysis in parallel (best-effort)
+  try {
+    const [isUrgentAI, aiSummary] = await Promise.all([
+      detectUrgency(description, cat),
+      analyzeTicketPhoto(imageUrl),
+    ]);
+    await db.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        isUrgent: isUrgentAI,
+        aiSummary: aiSummary || null,
+      },
+    });
+  } catch {
+    // AI enrichment failure must never block ticket creation
+  }
 
   return NextResponse.json({ id: ticket.id }, { status: 201 });
 }

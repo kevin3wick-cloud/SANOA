@@ -97,6 +97,7 @@ model Ticket {
   status                 TicketStatus               @default(OPEN)
   category               TicketCategory
   isUrgent               Boolean                    @default(false)
+  aiSummary              String?
   tenantId               String
   tenant                 Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignedToId           String?

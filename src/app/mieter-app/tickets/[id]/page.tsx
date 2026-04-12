@@ -9,6 +9,7 @@ import { formatPriorityLabel, getTicketPriority } from "@/lib/ticket-priority";
 import { MieterNav } from "../../_components/mieter-nav";
 import { MieterAppointmentPanel } from "../../_components/mieter-appointment-panel";
 import { MieterCloseTicketForm } from "../../_components/mieter-close-ticket-form";
+import { MieterEditTicketForm } from "../../_components/mieter-edit-ticket-form";
 import { MieterTicketChat } from "../../_components/mieter-ticket-chat";
 import { MieterTopBar } from "../../_components/mieter-top-bar";
 
@@ -111,6 +112,12 @@ export default async function MieterTicketDetailPage({ params }: PageProps) {
                 <span className="muted">Beschreibung:</span> {ticket.description}
               </p>
             ) : null}
+            {ticket.status === "OPEN" && (
+              <MieterEditTicketForm
+                ticketId={ticket.id}
+                currentDescription={ticket.description}
+              />
+            )}
           </div>
 
           <div className="card stack">

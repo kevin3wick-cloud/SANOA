@@ -125,6 +125,21 @@ export default async function TicketDetailPage({ params }: TicketDetailProps) {
               <p>
                 <strong>Beschreibung:</strong> {ticket.description}
               </p>
+              {(ticket as { aiSummary?: string | null }).aiSummary ? (
+                <div style={{
+                  display: "flex",
+                  gap: 8,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "var(--accent-dim)",
+                  border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+                }}>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>✨</span>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--accent)", lineHeight: 1.5 }}>
+                    {(ticket as { aiSummary?: string | null }).aiSummary}
+                  </p>
+                </div>
+              ) : null}
             </div>
             <div className="card stack">
               <h3>Zeitliche Angaben</h3>
