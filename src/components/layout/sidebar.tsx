@@ -44,24 +44,31 @@ type SidebarProps = {
 export function Sidebar({ userRole, orgRole }: SidebarProps) {
   const pathname = usePathname();
   const [tenantUnreadCount, setTenantUnreadCount] = useState(0);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch("/api/tickets/unread-summary");
-        if (!response.ok) return;
-        const data = (await response.json()) as { count?: number };
-        if (!cancelled && typeof data.count === "number") {
-          setTenantUnreadCount(data.count);
+        const [ticketRes, pendingRes] = await Promise.all([
+          fetch("/api/tickets/unread-summary"),
+          fetch("/api/mieter/pending-count"),
+        ]);
+        if (!cancelled) {
+          if (ticketRes.ok) {
+            const d = (await ticketRes.json()) as { count?: number };
+            if (typeof d.count === "number") setTenantUnreadCount(d.count);
+          }
+          if (pendingRes.ok) {
+            const d = (await pendingRes.json()) as { count?: number };
+            if (typeof d.count === "number") setPendingRequestCount(d.count);
+          }
         }
       } catch {
         /* ignore */
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [pathname]);
 
   const isAdmin = userRole === "ADMIN";
@@ -90,22 +97,31 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
           const Icon = item.icon;
           const active = isNavActive(item.href, pathname);
           const showChatDot = item.href === "/tickets" && tenantUnreadCount > 0;
+          const showPendingDot = item.href === "/mieter" && pendingRequestCount > 0;
+          const showDot = showChatDot || showPendingDot;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={active ? "nav-link nav-link-active" : "nav-link"}
-              style={showChatDot ? { position: "relative" } : undefined}
+              style={showDot ? { position: "relative" } : undefined}
             >
               <Icon size={20} strokeWidth={1.75} aria-hidden />
               <span>{item.label}</span>
-              {showChatDot ? (
+              {showChatDot && (
                 <span
                   className="sidebar-nav-unread-dot"
                   title={`${tenantUnreadCount} Ticket(s) mit neuer Mieter-Nachricht`}
                   aria-hidden
                 />
-              ) : null}
+              )}
+              {showPendingDot && (
+                <span
+                  className="sidebar-nav-unread-dot"
+                  title={`${pendingRequestCount} offene Namensänderungs-Anfrage(n)`}
+                  aria-hidden
+                />
+              )}
             </Link>
           );
         })}

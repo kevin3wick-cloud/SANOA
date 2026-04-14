@@ -60,9 +60,23 @@ export default async function MieterPage() {
                   {tenants.map((tenant) => (
                     <tr key={tenant.id}>
                       <td>
-                        <Link className="table-link" href={`/mieter/${tenant.id}`}>
-                          {tenant.name}
-                        </Link>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Link className="table-link" href={`/mieter/${tenant.id}`}>
+                            {tenant.name}
+                          </Link>
+                          {tenant.pendingName && (
+                            <span style={{
+                              display: "inline-flex", alignItems: "center",
+                              fontSize: 11, fontWeight: 600, padding: "2px 8px",
+                              borderRadius: 20, whiteSpace: "nowrap",
+                              background: "color-mix(in srgb, #f59e0b 15%, transparent)",
+                              color: "#f59e0b",
+                              border: "1px solid color-mix(in srgb, #f59e0b 35%, transparent)",
+                            }}>
+                              Anfrage
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>{tenant.apartment}</td>
                       <td className="muted">
