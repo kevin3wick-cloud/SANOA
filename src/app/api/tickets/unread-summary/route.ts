@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { hasUnreadFromTenantForLandlord } from "@/lib/ticket-chat-read";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { db } from "@/lib/db";
 
 export async function GET() {
+  const sessionUser = await getLandlordSessionUser();
+  if (!sessionUser) return NextResponse.json({ count: 0 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgId: string | null = (sessionUser as any).orgId ?? null;
+
   const rows = await db.ticket.findMany({
+    where: orgId ? { orgId } : {},
     include: {
       notes: {
         where: { isInternal: false },
