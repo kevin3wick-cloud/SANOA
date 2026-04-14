@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check } from "lucide-react";
 
+type Property = { id: string; name: string };
+
 type Props = {
   tenantId: string;
   name: string;
@@ -11,17 +13,20 @@ type Props = {
   phone: string;
   apartment: string;
   archivedAt: string | null;
+  propertyId?: string | null;
+  propertyName?: string | null;
+  properties?: Property[];
 };
 
-export function MieterStammdatenForm({ tenantId, name, email, phone, apartment, archivedAt }: Props) {
+export function MieterStammdatenForm({ tenantId, name, email, phone, apartment, archivedAt, propertyId, propertyName, properties = [] }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [values, setValues] = useState({ name, email, phone, apartment });
+  const [values, setValues] = useState({ name, email, phone, apartment, propertyId: propertyId ?? "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function startEdit() {
-    setValues({ name, email, phone, apartment });
+    setValues({ name, email, phone, apartment, propertyId: propertyId ?? "" });
     setError(null);
     setEditing(true);
   }
@@ -39,7 +44,7 @@ export function MieterStammdatenForm({ tenantId, name, email, phone, apartment, 
       const res = await fetch(`/api/mieter/${tenantId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, propertyId: values.propertyId || null }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -89,6 +94,22 @@ export function MieterStammdatenForm({ tenantId, name, email, phone, apartment, 
           {field("E-Mail", "email", "email")}
           {field("Telefon", "phone", "tel")}
           {field("Wohnung / Bezeichnung", "apartment")}
+          {properties.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 12, color: "var(--muted)" }}>Liegenschaft</label>
+              <select
+                value={values.propertyId}
+                onChange={e => setValues(v => ({ ...v, propertyId: e.target.value }))}
+                disabled={loading}
+                style={{ fontSize: 14 }}
+              >
+                <option value="">— Keine Liegenschaft —</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {error && (
             <p style={{ margin: 0, fontSize: 13, color: "#f87171" }}>{error}</p>
@@ -117,6 +138,7 @@ export function MieterStammdatenForm({ tenantId, name, email, phone, apartment, 
           <Row label="E-Mail" value={email} />
           <Row label="Telefon" value={phone || "—"} />
           <Row label="Wohnung" value={apartment} />
+          <Row label="Liegenschaft" value={propertyName || "—"} />
           {archivedAt && (
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>
               Archiviert am {new Date(archivedAt).toLocaleDateString("de-CH")} – kein Mieter-Portal-Zugang.

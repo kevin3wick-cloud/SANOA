@@ -14,6 +14,7 @@ type PatchBody = {
   email?: string;
   phone?: string;
   apartment?: string;
+  propertyId?: string | null;
 };
 
 export async function PATCH(
@@ -75,9 +76,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Ungültige E-Mail-Adresse." }, { status: 400 });
   }
 
+  const propertyId = body.propertyId !== undefined
+    ? (body.propertyId || null)
+    : tenant.propertyId;
+
   await db.tenant.update({
     where: { id },
-    data: { leaseStart, leaseEnd, archivedAt, name, email, phone, apartment }
+    data: { leaseStart, leaseEnd, archivedAt, name, email, phone, apartment, propertyId }
   });
 
   // Keep User.name in sync if name changed

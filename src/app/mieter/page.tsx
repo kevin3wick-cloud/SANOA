@@ -17,14 +17,16 @@ export default async function MieterPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tenants = await (db.tenant as any).findMany({
     where: { archivedAt: null, ...tenantOrgFilter(user as any) },
-    include: {
-      _count: {
-        select: { tickets: true }
-      }
+    select: {
+      id: true,
+      name: true,
+      apartment: true,
+      leaseEnd: true,
+      pendingName: true,
+      property: { select: { name: true } },
+      _count: { select: { tickets: true } },
     },
-    orderBy: {
-      name: "asc"
-    }
+    orderBy: { name: "asc" },
   });
 
   return (
@@ -51,16 +53,17 @@ export default async function MieterPage() {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Liegenschaft</th>
                     <th>Wohnung</th>
                     <th>Mietende</th>
-                    <th>Anzahl Tickets</th>
+                    <th>Tickets</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tenants.map((tenant) => (
                     <tr key={tenant.id}>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <Link className="table-link" href={`/mieter/${tenant.id}`}>
                             {tenant.name}
                           </Link>
@@ -78,6 +81,7 @@ export default async function MieterPage() {
                           )}
                         </div>
                       </td>
+                      <td className="muted" style={{ fontSize: 13 }}>{tenant.property?.name ?? "—"}</td>
                       <td>{tenant.apartment}</td>
                       <td className="muted">
                         {tenant.leaseEnd ? formatDate(tenant.leaseEnd) : "—"}

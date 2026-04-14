@@ -10,6 +10,7 @@ import { MieterDeleteForm } from "./_components/mieter-delete-form";
 import { MieterQrForm } from "./_components/mieter-qr-form";
 import { NameRequestCard } from "./_components/name-request-card";
 import { db } from "@/lib/db";
+import { getLandlordSessionUser } from "@/lib/landlord-auth";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
 type MieterDetailProps = {
@@ -18,6 +19,8 @@ type MieterDetailProps = {
 
 export default async function MieterDetailPage({ params }: MieterDetailProps) {
   const { id } = await params;
+  const sessionUser = await getLandlordSessionUser();
+  const orgId = (sessionUser as any)?.orgId ?? null;
 
   // Base URL for QR code: use env var if set, else hardcoded Railway URL.
   // Never use request headers — Railway's internal proxy sets host to localhost:8080.
@@ -25,18 +28,22 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
     "https://app.sanoa.tech";
 
-  const tenant = await (db.tenant as any).findUnique({
-    where: { id },
-    include: {
-      tickets: {
-        orderBy: { createdAt: "desc" }
-      },
-      documents: {
-        orderBy: { createdAt: "desc" }
-      },
-      user: true
-    }
-  });
+  const [tenant, properties] = await Promise.all([
+    (db.tenant as any).findUnique({
+      where: { id },
+      include: {
+        tickets: { orderBy: { createdAt: "desc" } },
+        documents: { orderBy: { createdAt: "desc" } },
+        user: true,
+        property: { select: { id: true, name: true } },
+      }
+    }),
+    (db.property as any).findMany({
+      where: orgId ? { orgId } : {},
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   if (!tenant) {
     notFound();
@@ -65,6 +72,9 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
           phone={tenant.phone}
           apartment={tenant.apartment}
           archivedAt={tenant.archivedAt?.toISOString() ?? null}
+          propertyId={tenant.property?.id ?? null}
+          propertyName={tenant.property?.name ?? null}
+          properties={properties}
         />
 
         <TenantLeaseForm
