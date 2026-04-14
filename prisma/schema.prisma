@@ -81,6 +81,9 @@ model Tenant {
   archivedAt  DateTime?
   magicToken  String?   @unique
   orgId       String?
+  pendingName           String?
+  pendingNameReason     String?
+  pendingNameRequestedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   tickets           Ticket[]

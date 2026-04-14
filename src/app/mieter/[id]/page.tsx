@@ -8,6 +8,7 @@ import { MieterResetPasswordForm } from "./_components/mieter-reset-password-for
 import { MieterStammdatenForm } from "./_components/mieter-stammdaten-form";
 import { MieterDeleteForm } from "./_components/mieter-delete-form";
 import { MieterQrForm } from "./_components/mieter-qr-form";
+import { NameRequestCard } from "./_components/name-request-card";
 import { db } from "@/lib/db";
 import { formatCategory, formatDate, formatStatus } from "@/lib/format";
 
@@ -46,6 +47,17 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
       <div className="stack">
         <h1 className="page-title">Mieter-Details</h1>
         <p className="page-lead muted">Stammdaten, Tickets und Dokumente.</p>
+        {/* Pending name change request — show before stammdaten */}
+        {tenant.pendingName && (
+          <NameRequestCard
+            tenantId={tenant.id}
+            currentName={tenant.name}
+            pendingName={tenant.pendingName}
+            pendingNameReason={tenant.pendingNameReason ?? ""}
+            pendingNameRequestedAt={tenant.pendingNameRequestedAt?.toISOString() ?? new Date().toISOString()}
+          />
+        )}
+
         <MieterStammdatenForm
           tenantId={tenant.id}
           name={tenant.name}
