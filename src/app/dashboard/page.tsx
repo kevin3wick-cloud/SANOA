@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import Link from "next/link";
 import {
   CircleAlert,
   CircleCheck,
@@ -167,8 +168,7 @@ export default async function DashboardPage() {
                       <tr
                         key={ticket.id}
                         className={urgent ? "dashboard-row-urgent" : undefined}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => { window.location.href = `/tickets/${ticket.id}`; }}
+                        style={{ position: "relative" }}
                       >
                         <td>
                           <span
@@ -179,9 +179,17 @@ export default async function DashboardPage() {
                               flexWrap: "wrap"
                             }}
                           >
-                            <span className="dashboard-ticket-title-link">
+                            <Link
+                              className="dashboard-ticket-title-link"
+                              href={`/tickets/${ticket.id}`}
+                              style={{ position: "static" }}
+                            >
+                              {/* Invisible overlay makes entire row clickable */}
+                              <span style={{
+                                position: "absolute", inset: 0, zIndex: 0,
+                              }} aria-hidden />
                               {ticket.title}
-                            </span>
+                            </Link>
                             {ticket.unreadFromTenant ? (
                               <span className="chat-unread-badge" title="Neue Nachricht vom Mieter">
                                 Mieter
