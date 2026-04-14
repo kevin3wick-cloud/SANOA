@@ -149,6 +149,22 @@ export async function POST(request: NextRequest) {
   const cat = category as TicketCategory;
   const title = `${formatCategory(cat)} – ${location}`;
 
+  // Auto-assign: find property assignee for this tenant's property
+  let autoAssignedToId: string | null = null;
+  try {
+    const tenant = await db.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: { propertyId: true },
+    });
+    if (tenant?.propertyId) {
+      const assignee = await db.propertyAssignee.findFirst({
+        where: { propertyId: tenant.propertyId },
+        orderBy: { createdAt: "asc" }, // pick first assignee if multiple
+      });
+      if (assignee) autoAssignedToId = assignee.userId;
+    }
+  } catch { /* auto-assign is best-effort */ }
+
   const ticket = await db.ticket.create({
     data: {
       title,
@@ -157,7 +173,8 @@ export async function POST(request: NextRequest) {
       category: cat,
       isUrgent: false,
       tenantId: user.tenantId,
-      imageUrl
+      imageUrl,
+      ...(autoAssignedToId ? { assignedToId: autoAssignedToId } : {}),
     }
   });
 

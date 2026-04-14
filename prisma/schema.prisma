@@ -70,6 +70,27 @@ model User {
   updatedAt       DateTime  @updatedAt
 }
 
+model Property {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  orgId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenants   Tenant[]
+  assignees PropertyAssignee[]
+}
+
+model PropertyAssignee {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String
+  createdAt  DateTime @default(now())
+
+  @@unique([propertyId, userId])
+}
+
 model Tenant {
   id          String    @id @default(cuid())
   name        String
@@ -81,6 +102,8 @@ model Tenant {
   archivedAt  DateTime?
   magicToken  String?   @unique
   orgId       String?
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   pendingName           String?
   pendingNameReason     String?
   pendingNameRequestedAt DateTime?

@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+type Property = { id: string; name: string };
 
 export function TenantCreateForm() {
   const router = useRouter();
@@ -13,8 +15,17 @@ export function TenantCreateForm() {
   const [password, setPassword] = useState("");
   const [leaseStart, setLeaseStart] = useState("");
   const [leaseEnd, setLeaseEnd] = useState("");
+  const [propertyId, setPropertyId] = useState("");
+  const [properties, setProperties] = useState<Property[]>([]);
   const [feedback, setFeedback] = useState("");
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/properties")
+      .then(r => r.json())
+      .then((d: Property[]) => { if (Array.isArray(d)) setProperties(d); })
+      .catch(() => {});
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,7 +43,8 @@ export function TenantCreateForm() {
           apartment: apartment.trim(),
           password,
           leaseStart,
-          ...(leaseEnd ? { leaseEnd } : {})
+          ...(leaseEnd ? { leaseEnd } : {}),
+          ...(propertyId ? { propertyId } : {}),
         })
       });
 
@@ -51,6 +63,7 @@ export function TenantCreateForm() {
       setPassword("");
       setLeaseStart("");
       setLeaseEnd("");
+      setPropertyId("");
       setFeedback(
         "Mieter wurde erfasst. Zugang Mieter-Portal: dieselbe E-Mail und das gewählte Passwort unter /mieter-app/login."
       );
@@ -108,6 +121,18 @@ export function TenantCreateForm() {
           minLength={6}
           required
         />
+        {properties.length > 0 && (
+          <select
+            value={propertyId}
+            onChange={e => setPropertyId(e.target.value)}
+            style={{ fontSize: 13 }}
+          >
+            <option value="">Liegenschaft zuweisen (optional)</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
         <label className="muted" style={{ fontSize: 13 }}>
           Mietbeginn <span style={{ color: "var(--accent)" }}>*</span>
         </label>

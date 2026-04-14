@@ -19,6 +19,7 @@ const navItems = [
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/reporting", label: "Auswertung", icon: BarChart2 },
   { href: "/mieter", label: "Mieter", icon: Users },
+  { href: "/liegenschaften", label: "Liegenschaften", icon: Building2 },
   { href: "/dokumente", label: "Dokumente", icon: FileText },
   { href: "/einstellungen", label: "Einstellungen", icon: Settings2 }
 ];

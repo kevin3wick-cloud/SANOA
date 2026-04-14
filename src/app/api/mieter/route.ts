@@ -16,6 +16,7 @@ type CreateTenantBody = {
   password?: string;
   leaseStart?: string;
   leaseEnd?: string;
+  propertyId?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   const phone = body.phone?.trim();
   const apartment = body.apartment?.trim();
   const password = body.password ?? "";
+  const propertyId = body.propertyId?.trim() || null;
 
   if (!name || !emailRaw || !phone || !apartment) {
     return NextResponse.json(
@@ -127,6 +129,7 @@ export async function POST(request: NextRequest) {
           leaseEnd,
           archivedAt,
           orgId,
+          ...(propertyId ? { propertyId } : {}),
         }
       });
       await tx.user.create({
