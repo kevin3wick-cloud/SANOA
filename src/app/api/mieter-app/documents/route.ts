@@ -10,10 +10,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   }
 
+  // Get tenant's orgId for document isolation
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tenant = await (db.tenant as any).findUnique({
+    where: { id: user.tenantId },
+    select: { orgId: true },
+  }) as { orgId: string | null } | null;
+  const orgId = tenant?.orgId ?? null;
+
   const filter = request.nextUrl.searchParams.get("filter") ?? "current";
 
   const where: Prisma.DocumentWhereInput = {
-    visibility: DocumentVisibility.TENANT_VISIBLE
+    visibility: DocumentVisibility.TENANT_VISIBLE,
+    // Always scope to this landlord's organisation
+    ...(orgId ? { orgId } : {}),
   };
 
   if (filter === "all-tenants") {

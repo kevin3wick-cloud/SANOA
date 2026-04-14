@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from "next/link";
-import { CircleDot } from "lucide-react";
+import { Bell, FileText, TicketIcon } from "lucide-react";
 import { hasUnreadFromLandlordForTenant } from "@/lib/ticket-chat-read";
 import { requireMieterSession } from "@/lib/tenant-auth";
 import { db } from "@/lib/db";
@@ -49,42 +49,81 @@ export default async function MieterDashboardPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      <div className="content" style={{ maxWidth: 640, paddingBottom: 40 }}>
-        <div className="stack dashboard-stack">
-          <MieterTopBar />
-          <MieterNav />
-          <div>
-            <h1 className="page-title">Hallo, {firstName}</h1>
-            <p className="page-lead muted">
-              {user.tenant.apartment}
-            </p>
-          </div>
-          {landlordUnreadTicketCount > 0 ? (
-            <div className="dashboard-hint dashboard-hint-info">
-              <CircleDot size={20} strokeWidth={1.75} aria-hidden />
-              <span>
-                Sie haben{" "}
-                <strong>
-                  {landlordUnreadTicketCount === 1
-                    ? "eine neue Nachricht"
-                    : `${landlordUnreadTicketCount} neue Nachrichten`}
-                </strong>{" "}
-                von der Verwaltung in Ihren Tickets.{" "}
-                <Link href="/mieter-app/tickets" className="table-link">
-                  Zu den Tickets
-                </Link>
-              </span>
-            </div>
-          ) : null}
-          <PushPermissionBanner />
-          <MieterDocumentsPanel />
-          <MieterTicketsList limit={5} title="Letzte Tickets" />
-          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-            <Link href="/mieter-app/tickets" className="table-link">
-              Alle Tickets anzeigen
-            </Link>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 16px 80px" }}>
+
+        {/* Top bar with bell */}
+        <MieterTopBar unreadCount={landlordUnreadTicketCount} />
+
+        {/* Greeting */}
+        <div style={{ padding: "24px 0 20px" }}>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em" }}>
+            Hallo, {firstName}
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--muted)" }}>
+            {user.tenant.apartment}
           </p>
         </div>
+
+        {/* Nav */}
+        <MieterNav />
+
+        {/* Unread message hint */}
+        {landlordUnreadTicketCount > 0 && (
+          <Link href="/mieter-app/tickets" style={{ textDecoration: "none" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "12px 16px", borderRadius: 12, margin: "16px 0",
+              background: "color-mix(in srgb, var(--accent) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: "var(--accent)", display: "flex",
+                alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <TicketIcon size={15} color="#fff" strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                  {landlordUnreadTicketCount === 1
+                    ? "1 neue Nachricht"
+                    : `${landlordUnreadTicketCount} neue Nachrichten`} von der Verwaltung
+                </p>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>Tippen um zu öffnen</p>
+              </div>
+              <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
+            </div>
+          </Link>
+        )}
+
+        {/* Push banner */}
+        <div style={{ margin: "16px 0" }}>
+          <PushPermissionBanner />
+        </div>
+
+        {/* Documents */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <FileText size={16} strokeWidth={1.75} style={{ color: "var(--muted)" }} />
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Dokumente</h2>
+          </div>
+          <MieterDocumentsPanel compact />
+        </section>
+
+        {/* Tickets */}
+        <section>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <TicketIcon size={16} strokeWidth={1.75} style={{ color: "var(--muted)" }} />
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Letzte Tickets</h2>
+            <Link href="/mieter-app/tickets" style={{
+              marginLeft: "auto", fontSize: 13, color: "var(--accent)", textDecoration: "none"
+            }}>
+              Alle →
+            </Link>
+          </div>
+          <MieterTicketsList limit={3} />
+        </section>
+
       </div>
     </main>
   );
