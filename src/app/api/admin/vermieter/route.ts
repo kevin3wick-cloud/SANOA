@@ -8,6 +8,7 @@ type Body = {
   email?: string;
   password?: string;
   isOrgAdmin?: boolean;
+  company?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
   const isOrgAdmin = body.isOrgAdmin === true;
+  const company = body.company?.trim() || null;
 
   if (!name || !email) {
     return NextResponse.json(
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password,
+      company,
       role: "LANDLORD",
       orgRole: isOrgAdmin ? "ORG_ADMIN" : "ORG_USER",
       orgId,
@@ -77,7 +80,7 @@ export async function GET() {
     where: { role: { in: ["LANDLORD", "ADMIN"] } },
     orderBy: { createdAt: "asc" },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    select: { id: true, name: true, email: true, role: true, orgRole: true, orgId: true, createdAt: true } as any,
+    select: { id: true, name: true, email: true, company: true, role: true, orgRole: true, orgId: true, createdAt: true } as any,
   });
 
   return NextResponse.json({ users });

@@ -59,6 +59,7 @@ model User {
   email           String    @unique
   password        String
   name            String
+  company         String?
   role            UserRole  @default(LANDLORD)
   orgRole         OrgRole   @default(ORG_USER)
   orgId           String?

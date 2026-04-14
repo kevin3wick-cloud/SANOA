@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, LogOut, UserPlus, KeyRound, X, ShieldCheck, User, Eye } from "lucide-react";
+import { Trash2, LogOut, UserPlus, KeyRound, X, ShieldCheck, User, Eye, Search } from "lucide-react";
 
 type OrgRole = "ORG_ADMIN" | "ORG_USER" | "ORG_GUEST";
 
@@ -10,6 +10,7 @@ type UserRow = {
   id: string;
   name: string;
   email: string;
+  company?: string | null;
   role: string;
   orgRole: OrgRole;
 };
@@ -110,9 +111,11 @@ function ResetPasswordInline({ userId, name }: { userId: string; name: string })
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-      <form onSubmit={handleSubmit} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}
+        autoComplete="off">
         <input type="password" placeholder={`Neues Passwort für ${name}`} value={newPassword}
           onChange={e => setNewPassword(e.target.value)} required minLength={6} autoFocus
+          autoComplete="new-password"
           style={{ flex: 1, minWidth: 160, fontSize: 13, padding: "5px 10px" }} />
         <button type="submit" disabled={loading} style={{ fontSize: 13, padding: "5px 12px", width: "auto" }}>
           {loading ? "…" : "Setzen"}
@@ -134,11 +137,16 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newCompany, setNewCompany] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newIsOrgAdmin, setNewIsOrgAdmin] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [roleChanging, setRoleChanging] = useState<string | null>(null);
+
+  // Filter state
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<OrgRole | "ALL">("ALL");
 
   useEffect(() => { void loadVermieter(); }, []);
 
@@ -159,12 +167,12 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
       const res = await fetch("/api/admin/vermieter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName, email: newEmail, password: newPassword, isOrgAdmin: newIsOrgAdmin }),
+        body: JSON.stringify({ name: newName, email: newEmail, password: newPassword, company: newCompany, isOrgAdmin: newIsOrgAdmin }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) { setFeedback({ type: "err", msg: data.error ?? "Fehler." }); return; }
       setFeedback({ type: "ok", msg: `${newEmail} wurde als Vermieter angelegt (${newIsOrgAdmin ? "Admin" : "Benutzer"}).` });
-      setNewName(""); setNewEmail(""); setNewPassword(""); setNewIsOrgAdmin(false);
+      setNewName(""); setNewEmail(""); setNewPassword(""); setNewCompany(""); setNewIsOrgAdmin(false);
       setShowAdd(false);
       await loadVermieter();
     } catch { setFeedback({ type: "err", msg: "Netzwerkfehler." }); }
@@ -197,9 +205,17 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
 
   const vermieterOnly = vermieterList.filter(u => u.role === "LANDLORD");
 
+  // Apply filters
+  const filtered = vermieterOnly.filter(u => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.company ?? "").toLowerCase().includes(q);
+    const matchRole = roleFilter === "ALL" || u.orgRole === roleFilter;
+    return matchSearch && matchRole;
+  });
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", padding: "40px 16px" }}>
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
@@ -233,15 +249,30 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
         {showAdd && (
           <div className="card stack" style={{ marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Neuer Vermieter</h3>
-            <form className="stack" onSubmit={addVermieter}>
+            {/* autoComplete="off" prevents browser from autofilling saved login credentials */}
+            <form className="stack" onSubmit={addVermieter} autoComplete="off">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <input type="text" placeholder="Name" value={newName}
-                  onChange={e => setNewName(e.target.value)} required />
-                <input type="email" placeholder="E-Mail" value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)} required />
+                <input
+                  type="text" placeholder="Name" value={newName}
+                  onChange={e => setNewName(e.target.value)} required
+                  autoComplete="off" name="new-name"
+                />
+                <input
+                  type="text" placeholder="Firma (optional)" value={newCompany}
+                  onChange={e => setNewCompany(e.target.value)}
+                  autoComplete="off" name="new-company"
+                />
               </div>
-              <input type="password" placeholder="Passwort (min. 6 Zeichen)" value={newPassword}
-                onChange={e => setNewPassword(e.target.value)} required minLength={6} />
+              <input
+                type="email" placeholder="E-Mail" value={newEmail}
+                onChange={e => setNewEmail(e.target.value)} required
+                autoComplete="off" name="new-email"
+              />
+              <input
+                type="password" placeholder="Passwort (min. 6 Zeichen)" value={newPassword}
+                onChange={e => setNewPassword(e.target.value)} required minLength={6}
+                autoComplete="new-password" name="new-password"
+              />
 
               {/* Rolle-Karten */}
               <div>
@@ -288,27 +319,57 @@ export function AdminVermieterPanel({ currentUserId }: Props) {
 
         {/* Vermieter-Liste */}
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Vermieter</h2>
-            <span style={{ fontSize: 13, color: "var(--muted)" }}>{vermieterOnly.length} Accounts</span>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Vermieter</h2>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>
+                {filtered.length !== vermieterOnly.length ? `${filtered.length} / ` : ""}{vermieterOnly.length} Accounts
+              </span>
+            </div>
+            {/* Filters */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ position: "relative", flex: 1, minWidth: 160 }}>
+                <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
+                <input
+                  type="text" placeholder="Suche Name, E-Mail, Firma…"
+                  value={search} onChange={e => setSearch(e.target.value)}
+                  style={{ width: "100%", paddingLeft: 30, fontSize: 13, padding: "7px 10px 7px 30px", margin: 0 }}
+                />
+              </div>
+              <select
+                value={roleFilter}
+                onChange={e => setRoleFilter(e.target.value as OrgRole | "ALL")}
+                style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, width: "auto", margin: 0 }}
+              >
+                <option value="ALL">Alle Rollen</option>
+                <option value="ORG_ADMIN">Admin</option>
+                <option value="ORG_USER">Benutzer</option>
+                <option value="ORG_GUEST">Gast</option>
+              </select>
+            </div>
           </div>
 
           {loading ? (
             <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", padding: "20px" }}>Wird geladen…</p>
-          ) : vermieterOnly.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", padding: "20px" }}>Noch keine Vermieter angelegt.</p>
+          ) : filtered.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", padding: "20px" }}>
+              {vermieterOnly.length === 0 ? "Noch keine Vermieter angelegt." : "Keine Treffer gefunden."}
+            </p>
           ) : (
             <div>
-              {vermieterOnly.map((u, idx) => (
+              {filtered.map((u, idx) => (
                 <div key={u.id} style={{
                   padding: "14px 20px",
-                  borderBottom: idx < vermieterOnly.length - 1 ? "1px solid var(--border)" : "none",
+                  borderBottom: idx < filtered.length - 1 ? "1px solid var(--border)" : "none",
                   display: "flex", alignItems: "flex-start", gap: 12,
                 }}>
                   <Avatar name={u.name} color={ORG_ROLE_COLORS[u.orgRole]} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</span>
+                      {u.company && (
+                        <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 400 }}>· {u.company}</span>
+                      )}
                       <RolePill orgRole={u.orgRole} />
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{u.email}</p>
