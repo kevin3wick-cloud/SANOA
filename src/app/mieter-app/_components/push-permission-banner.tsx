@@ -14,10 +14,25 @@ function isInStandaloneMode() {
     window.matchMedia("(display-mode: standalone)").matches;
 }
 
+const DISMISSED_KEY = "sanoa_push_banner_dismissed";
+
+function persistDismiss() {
+  try { localStorage.setItem(DISMISSED_KEY, "1"); } catch { /* ignore */ }
+}
+
+function wasDismissed() {
+  try { return localStorage.getItem(DISMISSED_KEY) === "1"; } catch { return false; }
+}
+
 export function PushPermissionBanner() {
   const [status, setStatus] = useState<"unknown" | "prompt" | "granted" | "denied" | "unsupported" | "ios-hint">("unknown");
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    if (wasDismissed()) setDismissed(true); persistDismiss();
+  }, []);
 
   useEffect(() => {
     // iOS: push only works as installed PWA
@@ -121,7 +136,7 @@ export function PushPermissionBanner() {
             Tippe auf <strong>Teilen</strong> (□↑) und dann <strong>„Zum Home-Bildschirm"</strong> — danach kannst du Benachrichtigungen aktivieren.
           </span>
         </div>
-        <button onClick={() => setDismissed(true)}
+        <button onClick={() => setDismissed(true); persistDismiss()}
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}>
           <X size={16} />
         </button>
@@ -186,7 +201,7 @@ export function PushPermissionBanner() {
             {loading ? "Wird aktiviert …" : "Aktivieren"}
           </button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={() => setDismissed(true); persistDismiss()}
             style={{
               fontSize: 13,
               padding: "7px 16px",
@@ -201,7 +216,7 @@ export function PushPermissionBanner() {
         </div>
       </div>
       <button
-        onClick={() => setDismissed(true)}
+        onClick={() => setDismissed(true); persistDismiss()}
         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}
       >
         <X size={16} />
