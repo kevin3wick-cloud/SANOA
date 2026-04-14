@@ -25,13 +25,14 @@ function rowsToImportData(rows: string[][]): ImportRow[] {
   if (rows.length < 2) return [];
   // Skip header row (row 0)
   return rows.slice(1).map((cols) => ({
-    name:       cols[0] ?? "",
-    email:      cols[1] ?? "",
-    phone:      cols[2] ?? "",
-    apartment:  cols[3] ?? "",
-    password:   cols[4] ?? "",
-    leaseStart: cols[5] ?? "",
-    leaseEnd:   cols[6] ?? "",
+    name:         cols[0] ?? "",
+    email:        cols[1] ?? "",
+    phone:        cols[2] ?? "",
+    apartment:    cols[3] ?? "",
+    password:     cols[4] ?? "",
+    leaseStart:   cols[5] ?? "",
+    leaseEnd:     cols[6] ?? "",
+    propertyName: cols[7] ?? "",
   }));
 }
 
@@ -160,7 +161,7 @@ export function TenantImportForm() {
             fontSize: 12, color: "var(--muted)", lineHeight: 1.6,
           }}>
             <strong style={{ color: "inherit" }}>Spalten (Semikolon-getrennt):</strong>{" "}
-            Name · E-Mail · Telefon · Wohnung · Passwort · Mietbeginn (TT.MM.JJJJ) · Mietende (optional)
+            Name · E-Mail · Telefon · Wohnung · Passwort · Mietbeginn (TT.MM.JJJJ) · Mietende (optional) · Liegenschaft (optional)
           </div>
 
           {/* File input */}
@@ -200,6 +201,7 @@ export function TenantImportForm() {
                       <th>Wohnung</th>
                       <th>Mietbeginn</th>
                       <th>Mietende</th>
+                      <th>Liegenschaft</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -212,6 +214,7 @@ export function TenantImportForm() {
                         <td>{row.apartment || <span style={{ color: "#f87171" }}>—</span>}</td>
                         <td>{row.leaseStart || <span style={{ color: "#f87171" }}>—</span>}</td>
                         <td className="muted">{row.leaseEnd || "—"}</td>
+                        <td className="muted">{row.propertyName || "—"}</td>
                       </tr>
                     ))}
                   </tbody>

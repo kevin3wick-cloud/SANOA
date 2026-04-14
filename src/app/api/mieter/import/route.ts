@@ -16,6 +16,7 @@ export type ImportRow = {
   password: string;
   leaseStart: string;
   leaseEnd?: string;
+  propertyName?: string; // optional: matched to Property.name in this org
 };
 
 export type ImportResult = {
@@ -45,6 +46,20 @@ export async function POST(request: NextRequest) {
 
   const results: ImportResult[] = [];
 
+  // Pre-load all properties for this org so we can match by name
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgProperties = await (db.property as any).findMany({
+    where: orgId ? { orgId } : {},
+    select: { id: true, name: true },
+  }) as { id: string; name: string }[];
+
+  function resolvePropertyId(rawName?: string): string | null {
+    if (!rawName?.trim()) return null;
+    const needle = rawName.trim().toLowerCase();
+    const match = orgProperties.find(p => p.name.toLowerCase() === needle);
+    return match?.id ?? null;
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNum = i + 2; // 1-based + header row
@@ -54,6 +69,7 @@ export async function POST(request: NextRequest) {
     const phone     = row.phone?.trim();
     const apartment = row.apartment?.trim();
     const password  = row.password?.trim() ?? "";
+    const propertyId = resolvePropertyId(row.propertyName);
 
     // Validate required fields
     if (!name || !email || !phone || !apartment) {
@@ -100,7 +116,7 @@ export async function POST(request: NextRequest) {
         await db.$transaction(async (tx) => {
           await (tx.tenant as any).update({
             where: { id: existingTenant.id },
-            data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null }
+            data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null, ...(propertyId ? { propertyId } : {}) }
           });
           if (existingUser) {
             await tx.user.update({ where: { id: existingUser.id }, data: { password, name } });
@@ -121,7 +137,7 @@ export async function POST(request: NextRequest) {
       await db.$transaction(async (tx) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tenant = await (tx.tenant as any).create({
-          data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId }
+          data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, ...(propertyId ? { propertyId } : {}) }
         });
         await tx.user.create({
           data: { email: userEmail, password, name, role: UserRole.MIETER, tenantId: tenant.id }
