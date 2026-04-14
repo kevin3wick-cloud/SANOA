@@ -9,14 +9,12 @@ import {
   FileText,
   LayoutDashboard,
   Settings2,
-  Ticket,
   Users,
   UsersRound
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/reporting", label: "Auswertung", icon: BarChart2 },
   { href: "/mieter", label: "Mieter", icon: Users },
   { href: "/liegenschaften", label: "Liegenschaften", icon: Building2 },
@@ -103,7 +101,7 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const active = isNavActive(item.href, pathname);
-          const showChatDot    = item.href === "/tickets"    && tenantUnreadCount > 0;
+          const showChatDot    = item.href === "/dashboard"   && tenantUnreadCount > 0;
           const showPendingDot = item.href === "/mieter"     && pendingRequestCount > 0;
           const showDocDot     = item.href === "/dokumente"  && docQuestionCount > 0;
           const showDot = showChatDot || showPendingDot || showDocDot;

@@ -1,8 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import Link from "next/link";
 import {
-  ArrowRight,
   CircleAlert,
   CircleCheck,
   CircleDot,
@@ -53,14 +51,19 @@ export default async function DashboardPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orgId = (sessionUser as any)?.orgId ?? null;
-  const orgWhere = { tenant: { orgId } };
+  const isOrgAdmin = (sessionUser as any)?.orgRole === "ORG_ADMIN";
+
+  // ORG_ADMIN sees all, others see only their assigned tickets
+  const visibilityWhere = isOrgAdmin
+    ? { tenant: { orgId } }
+    : { assignedToId: sessionUser?.id, tenant: { orgId } };
 
   const [open, inProgress, done, actionTicketsRaw] = await Promise.all([
-    db.ticket.count({ where: { status: TicketStatus.OPEN, ...orgWhere } }),
-    db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS, ...orgWhere } }),
-    db.ticket.count({ where: { status: TicketStatus.DONE, ...orgWhere } }),
+    db.ticket.count({ where: { status: TicketStatus.OPEN, ...visibilityWhere } }),
+    db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS, ...visibilityWhere } }),
+    db.ticket.count({ where: { status: TicketStatus.DONE, ...visibilityWhere } }),
     db.ticket.findMany({
-      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] }, ...orgWhere },
+      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] }, ...visibilityWhere },
       include: { tenant: true, ...chatNotesInclude }
     })
   ]);
@@ -74,22 +77,24 @@ export default async function DashboardPage() {
       <div className="stack dashboard-stack">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-lead muted">Übersicht aller Tickets.</p>
+          <p className="page-lead muted">
+            {isOrgAdmin ? "Übersicht aller Tickets." : "Deine zugewiesenen Tickets."}
+          </p>
         </div>
 
         <div className="grid grid-4">
-          <Link href="/tickets?filter=open" className="card stat-card stat-card-link">
+          <div className="card stat-card">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-open">
                 <CircleAlert size={22} strokeWidth={1.75} aria-hidden />
               </div>
               <div>
-                <div className="muted">Offene Tickets</div>
+                <div className="muted">Offen</div>
                 <p className="stat-value">{open}</p>
               </div>
             </div>
-          </Link>
-          <Link href="/tickets?filter=progress" className="card stat-card stat-card-link">
+          </div>
+          <div className="card stat-card">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-progress">
                 <CircleDot size={22} strokeWidth={1.75} aria-hidden />
@@ -99,8 +104,8 @@ export default async function DashboardPage() {
                 <p className="stat-value">{inProgress}</p>
               </div>
             </div>
-          </Link>
-          <Link href="/archiv" className="card stat-card stat-card-link">
+          </div>
+          <div className="card stat-card">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-done">
                 <CircleCheck size={22} strokeWidth={1.75} aria-hidden />
@@ -110,8 +115,8 @@ export default async function DashboardPage() {
                 <p className="stat-value">{done}</p>
               </div>
             </div>
-          </Link>
-          <Link href="/tickets?filter=all" className="card stat-card stat-card-link">
+          </div>
+          <div className="card stat-card">
             <div className="stat-card-inner">
               <div className="stat-icon-wrap stat-icon-total">
                 <LayoutGrid size={22} strokeWidth={1.75} aria-hidden />
@@ -121,7 +126,7 @@ export default async function DashboardPage() {
                 <p className="stat-value">{total}</p>
               </div>
             </div>
-          </Link>
+          </div>
         </div>
 
         <div className="card dashboard-queue-card">
@@ -132,10 +137,6 @@ export default async function DashboardPage() {
                 Offen und in Bearbeitung, sortiert nach Dringlichkeit und Alter.
               </p>
             </div>
-            <Link href="/tickets" className="dashboard-text-link">
-              Alle Tickets
-              <ArrowRight size={14} strokeWidth={1.75} aria-hidden />
-            </Link>
           </div>
           {actionTickets.length === 0 ? (
             <p className="muted">Keine offenen oder laufenden Tickets. Gut gemacht.</p>
@@ -166,6 +167,8 @@ export default async function DashboardPage() {
                       <tr
                         key={ticket.id}
                         className={urgent ? "dashboard-row-urgent" : undefined}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => { window.location.href = `/tickets/${ticket.id}`; }}
                       >
                         <td>
                           <span
@@ -176,12 +179,9 @@ export default async function DashboardPage() {
                               flexWrap: "wrap"
                             }}
                           >
-                            <Link
-                              className="dashboard-ticket-title-link"
-                              href={`/tickets/${ticket.id}`}
-                            >
+                            <span className="dashboard-ticket-title-link">
                               {ticket.title}
-                            </Link>
+                            </span>
                             {ticket.unreadFromTenant ? (
                               <span className="chat-unread-badge" title="Neue Nachricht vom Mieter">
                                 Mieter
