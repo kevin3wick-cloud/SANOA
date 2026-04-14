@@ -185,13 +185,14 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
       {showAdd && (
         <div className="card stack">
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Neuer Mitarbeiter</h3>
-          <form className="stack" onSubmit={addMember}>
+          <form className="stack" onSubmit={addMember} autoComplete="off">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <input type="text" placeholder="Name" value={name} onChange={e => setName(e.target.value)} required />
-              <input type="email" placeholder="E-Mail" value={email} onChange={e => setEmail(e.target.value)} required />
+              <input type="text" placeholder="Name" value={name} onChange={e => setName(e.target.value)} required autoComplete="off" name="new-member-name" />
+              <input type="email" placeholder="E-Mail" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="off" name="new-member-email" />
             </div>
             <input type="password" placeholder="Passwort (min. 6 Zeichen)" value={password}
-              onChange={e => setPassword(e.target.value)} required minLength={6} />
+              onChange={e => setPassword(e.target.value)} required minLength={6}
+              autoComplete="new-password" name="new-member-password" />
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rolle</label>
               <div style={{ display: "flex", gap: 8 }}>
