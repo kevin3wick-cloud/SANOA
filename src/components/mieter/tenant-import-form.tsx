@@ -160,7 +160,7 @@ export function TenantImportForm() {
             fontSize: 12, color: "var(--muted)", lineHeight: 1.6,
           }}>
             <strong style={{ color: "inherit" }}>Spalten (Semikolon-getrennt):</strong>{" "}
-            Name · E-Mail · Telefon · Wohnung · Passwort · Mietbeginn (JJJJ-MM-TT) · Mietende (optional)
+            Name · E-Mail · Telefon · Wohnung · Passwort · Mietbeginn (TT.MM.JJJJ) · Mietende (optional)
           </div>
 
           {/* File input */}

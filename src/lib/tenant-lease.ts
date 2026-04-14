@@ -21,10 +21,22 @@ export async function archiveTenantsPastLeaseEnd() {
   });
 }
 
+/**
+ * Normalise a date string to ISO YYYY-MM-DD.
+ * Accepts: DD.MM.YYYY (German) and YYYY-MM-DD (ISO).
+ */
+function normaliseDateString(s: string): string {
+  // German format: DD.MM.YYYY  e.g. 02.12.2026
+  const de = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (de) return `${de[3]}-${de[2].padStart(2, "0")}-${de[1].padStart(2, "0")}`;
+  return s; // assume ISO already
+}
+
 export function parseOptionalDateInput(value: string | undefined | null): Date | null {
   const s = value?.trim();
   if (!s) return null;
-  const d = new Date(`${s}T12:00:00.000Z`);
+  const iso = normaliseDateString(s);
+  const d = new Date(`${iso}T12:00:00.000Z`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -32,7 +44,8 @@ export function parseOptionalDateInput(value: string | undefined | null): Date |
 export function parseLeaseEndDateInput(value: string | undefined | null): Date | null {
   const s = value?.trim();
   if (!s) return null;
-  const d = new Date(`${s}T23:59:59.999Z`);
+  const iso = normaliseDateString(s);
+  const d = new Date(`${iso}T23:59:59.999Z`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 

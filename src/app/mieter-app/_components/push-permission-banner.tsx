@@ -1,14 +1,42 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, X } from "lucide-react";
+import { Bell, X } from "lucide-react";
+
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isInStandaloneMode() {
+  if (typeof window === "undefined") return false;
+  return (window.navigator as any).standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches;
+}
 
 export function PushPermissionBanner() {
-  const [status, setStatus] = useState<"unknown" | "prompt" | "granted" | "denied" | "unsupported">("unknown");
+  const [status, setStatus] = useState<"unknown" | "prompt" | "granted" | "denied" | "unsupported" | "ios-hint">("unknown");
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // iOS: push only works as installed PWA
+    if (isIOS()) {
+      if (isInStandaloneMode()) {
+        // Installed as PWA → check normal permission
+        if (!("Notification" in window) || !("PushManager" in window)) {
+          setStatus("unsupported");
+        } else {
+          setStatus(Notification.permission as any);
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        }
+      } else {
+        // Not installed → show iOS install hint
+        setStatus("ios-hint");
+      }
+      return;
+    }
+
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       setStatus("unsupported");
       return;
@@ -73,7 +101,33 @@ export function PushPermissionBanner() {
     }
   }
 
-  if (status === "unsupported" || status === "unknown" || dismissed) return null;
+  if (status === "unknown" || dismissed) return null;
+  if (status === "unsupported") return null;
+
+  // iOS: not installed as PWA yet
+  if (status === "ios-hint") {
+    return (
+      <div style={{
+        display: "flex", alignItems: "flex-start", gap: 12,
+        padding: "14px 16px",
+        background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--accent) 25%, transparent)",
+        borderRadius: 10, fontSize: 14,
+      }}>
+        <Bell size={18} strokeWidth={2} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }} />
+        <div style={{ flex: 1 }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>Benachrichtigungen aktivieren</strong>
+          <span style={{ color: "var(--muted)", fontSize: 13 }}>
+            Tippe auf <strong>Teilen</strong> (□↑) und dann <strong>„Zum Home-Bildschirm"</strong> — danach kannst du Benachrichtigungen aktivieren.
+          </span>
+        </div>
+        <button onClick={() => setDismissed(true)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}>
+          <X size={16} />
+        </button>
+      </div>
+    );
+  }
 
   if (status === "granted") {
     return (
