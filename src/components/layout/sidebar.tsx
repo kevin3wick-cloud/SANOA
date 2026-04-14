@@ -46,14 +46,16 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
   const pathname = usePathname();
   const [tenantUnreadCount, setTenantUnreadCount] = useState(0);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [docQuestionCount, setDocQuestionCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [ticketRes, pendingRes] = await Promise.all([
+        const [ticketRes, pendingRes, docQRes] = await Promise.all([
           fetch("/api/tickets/unread-summary"),
           fetch("/api/mieter/pending-count"),
+          fetch("/api/documents/questions/unanswered-count"),
         ]);
         if (!cancelled) {
           if (ticketRes.ok) {
@@ -63,6 +65,10 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
           if (pendingRes.ok) {
             const d = (await pendingRes.json()) as { count?: number };
             if (typeof d.count === "number") setPendingRequestCount(d.count);
+          }
+          if (docQRes.ok) {
+            const d = (await docQRes.json()) as { count?: number };
+            if (typeof d.count === "number") setDocQuestionCount(d.count);
           }
         }
       } catch {
@@ -97,9 +103,10 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const active = isNavActive(item.href, pathname);
-          const showChatDot = item.href === "/tickets" && tenantUnreadCount > 0;
-          const showPendingDot = item.href === "/mieter" && pendingRequestCount > 0;
-          const showDot = showChatDot || showPendingDot;
+          const showChatDot    = item.href === "/tickets"    && tenantUnreadCount > 0;
+          const showPendingDot = item.href === "/mieter"     && pendingRequestCount > 0;
+          const showDocDot     = item.href === "/dokumente"  && docQuestionCount > 0;
+          const showDot = showChatDot || showPendingDot || showDocDot;
           return (
             <Link
               key={item.href}
@@ -120,6 +127,13 @@ export function Sidebar({ userRole, orgRole }: SidebarProps) {
                 <span
                   className="sidebar-nav-unread-dot"
                   title={`${pendingRequestCount} offene Namensänderungs-Anfrage(n)`}
+                  aria-hidden
+                />
+              )}
+              {showDocDot && (
+                <span
+                  className="sidebar-nav-unread-dot"
+                  title={`${docQuestionCount} offene Dokumenten-Frage(n)`}
                   aria-hidden
                 />
               )}

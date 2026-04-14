@@ -185,4 +185,20 @@ model Document {
   tenant             Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   archivedAt         DateTime?
   createdAt          DateTime           @default(now())
+  questions          DocumentQuestion[]
+}
+
+model DocumentQuestion {
+  id          String    @id @default(cuid())
+  documentId  String
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tenantId    String
+  orgId       String?
+  question    String
+  answer      String?
+  answeredAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([documentId])
+  @@index([orgId])
 }

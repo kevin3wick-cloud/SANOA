@@ -4,6 +4,102 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Document, DocumentKind } from "@prisma/client";
 import { formatDate, formatDocumentKind } from "@/lib/format";
+import { MessageCircle, Send, CheckCircle } from "lucide-react";
+
+function DocumentCard({ doc }: { doc: DocumentRow }) {
+  const [showQ, setShowQ] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function submitQuestion() {
+    if (!question.trim()) return;
+    setSending(true);
+    try {
+      await fetch(`/api/mieter-app/documents/${doc.id}/question`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: question.trim() }),
+      });
+      setSent(true);
+      setQuestion("");
+      setShowQ(false);
+    } finally { setSending(false); }
+  }
+
+  return (
+    <div style={{ borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", overflow: "hidden" }}>
+      {/* Document row */}
+      <a href={doc.fileUrl} target="_blank" rel="noreferrer"
+        style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", padding: "12px 14px" }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+          background: "color-mix(in srgb, var(--accent) 12%, transparent)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: 16 }}>📄</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {doc.name}
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
+            {formatDocumentKind(doc.kind as DocumentKind)} · {formatDate(new Date(doc.createdAt))}
+          </p>
+        </div>
+        <span style={{ fontSize: 18, color: "var(--muted)", flexShrink: 0 }}>›</span>
+      </a>
+
+      {/* Question button / form */}
+      <div style={{ borderTop: "1px solid var(--border)", padding: "8px 14px" }}>
+        {!showQ && !sent && (
+          <button type="button" onClick={() => setShowQ(true)}
+            style={{
+              background: "none", border: "none", cursor: "pointer", padding: 0,
+              fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 5,
+            }}>
+            <MessageCircle size={13} strokeWidth={1.75} /> Frage stellen
+          </button>
+        )}
+        {sent && (
+          <span style={{ fontSize: 12, color: "#34d399", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <CheckCircle size={13} /> Frage gesendet — die Verwaltung antwortet in Kuerze
+          </span>
+        )}
+        {showQ && (
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <textarea
+              autoFocus
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder="Ihre Frage zu diesem Dokument…"
+              rows={2}
+              style={{
+                flex: 1, fontSize: 13, padding: "8px 10px", borderRadius: 8,
+                border: "1px solid var(--border)", background: "var(--bg)",
+                color: "var(--text)", resize: "none",
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <button type="button" onClick={submitQuestion} disabled={sending || !question.trim()}
+                style={{
+                  padding: "8px 10px", borderRadius: 8, border: "none",
+                  background: "var(--accent)", color: "#fff", cursor: "pointer",
+                  display: "inline-flex", alignItems: "center",
+                }}>
+                <Send size={14} />
+              </button>
+              <button type="button" onClick={() => { setShowQ(false); setQuestion(""); }}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "none", color: "var(--muted)", cursor: "pointer", fontSize: 11 }}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 type DocumentRow = Omit<Document, "createdAt" | "archivedAt"> & {
   createdAt: string;
@@ -94,34 +190,7 @@ export function MieterDocumentsPanel({ compact = false }: { compact?: boolean })
       {docs && docs.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {docs.map((d) => (
-            <a
-              key={d.id}
-              href={d.fileUrl}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "flex", alignItems: "center", gap: 12, textDecoration: "none",
-                padding: "12px 14px", borderRadius: 10,
-                background: "var(--surface)", border: "1px solid var(--border)",
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                background: "color-mix(in srgb, var(--accent) 12%, transparent)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{ fontSize: 16 }}>📄</span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {d.name}
-                </p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
-                  {formatDocumentKind(d.kind as DocumentKind)} · {formatDate(new Date(d.createdAt))}
-                </p>
-              </div>
-              <span style={{ fontSize: 18, color: "var(--muted)", flexShrink: 0 }}>›</span>
-            </a>
+            <DocumentCard key={d.id} doc={d} />
           ))}
         </div>
       )}

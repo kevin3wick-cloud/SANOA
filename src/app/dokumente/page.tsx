@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { DocumentVisibility } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { DocumentUploadForm } from "@/components/ui/document-upload-form";
+import { DocumentQuestionsPanel } from "./_components/document-questions-panel";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
@@ -11,7 +12,7 @@ export default async function DokumentePage() {
   const user = await getLandlordSessionUser();
   const orgId = (user as any)?.orgId ?? null;
 
-  const [documents, tenants] = await Promise.all([
+  const [documents, tenants, rawQuestions] = await Promise.all([
     db.document.findMany({
       where: { orgId },
       include: { tenant: true },
@@ -21,8 +22,28 @@ export default async function DokumentePage() {
       where: { archivedAt: null, orgId },
       select: { id: true, name: true },
       orderBy: { name: "asc" }
-    })
+    }),
+    (db.documentQuestion as any).findMany({
+      where: { ...(orgId ? { orgId } : {}), answeredAt: null },
+      orderBy: { createdAt: "asc" },
+      include: { document: { select: { id: true, name: true } } },
+    }),
   ]);
+
+  // Enrich questions with tenant names
+  const openQuestions = await Promise.all(
+    (rawQuestions as any[]).map(async (q: any) => {
+      const tenant = await db.tenant.findUnique({ where: { id: q.tenantId }, select: { name: true } });
+      return {
+        id: q.id,
+        question: q.question,
+        createdAt: q.createdAt.toISOString(),
+        tenantName: tenant?.name ?? "Unbekannt",
+        documentId: q.document.id,
+        documentName: q.document.name,
+      };
+    })
+  );
 
   return (
     <AppShell>
@@ -31,6 +52,9 @@ export default async function DokumentePage() {
           <h1 className="page-title">Dokumente</h1>
           <p className="page-lead muted">Verträge und Unterlagen zentral ablegen.</p>
         </div>
+        {openQuestions.length > 0 && (
+          <DocumentQuestionsPanel questions={openQuestions} />
+        )}
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Dokument hochladen (PDF)</h3>
           <DocumentUploadForm tenants={tenants} />

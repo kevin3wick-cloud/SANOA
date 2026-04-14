@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Plus, Trash2, UserPlus, X, ArrowRightLeft } from "lucide-react";
+import { Building2, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type TeamMember = { id: string; name: string; email: string };
@@ -28,12 +28,6 @@ export function LiegenschaftenPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Transfer tickets state
-  const [showTransfer, setShowTransfer] = useState(false);
-  const [fromUser, setFromUser] = useState("");
-  const [toUser, setToUser] = useState("");
-  const [transferring, setTransferring] = useState(false);
-  const [transferResult, setTransferResult] = useState<string | null>(null);
 
   async function addProperty() {
     if (!newName.trim()) return;
@@ -88,88 +82,9 @@ export function LiegenschaftenPanel({
     ));
   }
 
-  async function transferTickets() {
-    if (!fromUser || !toUser || fromUser === toUser) return;
-    setTransferring(true);
-    setTransferResult(null);
-    try {
-      const res = await fetch("/api/tickets/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromUserId: fromUser, toUserId: toUser }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const fromName = teamMembers.find(m => m.id === fromUser)?.name ?? "Person";
-        const toName = teamMembers.find(m => m.id === toUser)?.name ?? "Person";
-        setTransferResult(`${data.transferred} offene Ticket(s) von ${fromName} an ${toName} übertragen.`);
-        setFromUser(""); setToUser("");
-        router.refresh();
-      }
-    } finally { setTransferring(false); }
-  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-      {/* Transfer tickets card */}
-      <div className="card stack">
-        <button
-          type="button"
-          onClick={() => { setShowTransfer(v => !v); setTransferResult(null); }}
-          style={{
-            background: "none", border: "none", cursor: "pointer", padding: 0,
-            display: "flex", alignItems: "center", gap: 10, textAlign: "left",
-          }}
-        >
-          <ArrowRightLeft size={18} strokeWidth={1.75} style={{ color: "var(--accent)", flexShrink: 0 }} />
-          <div>
-            <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>Tickets übergeben</p>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
-              Alle offenen Tickets von Person A an Person B übertragen (z.B. bei Krankheit)
-            </p>
-          </div>
-        </button>
-
-        {showTransfer && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Von</label>
-                <select value={fromUser} onChange={e => setFromUser(e.target.value)}
-                  style={{ width: "100%", fontSize: 13, padding: "8px 10px" }}>
-                  <option value="">Person wählen…</option>
-                  {teamMembers.map(m => (
-                    <option key={m.id} value={m.id} disabled={m.id === toUser}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-              <ArrowRightLeft size={16} style={{ color: "var(--muted)", marginTop: 18 }} />
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>An</label>
-                <select value={toUser} onChange={e => setToUser(e.target.value)}
-                  style={{ width: "100%", fontSize: 13, padding: "8px 10px" }}>
-                  <option value="">Person wählen…</option>
-                  {teamMembers.map(m => (
-                    <option key={m.id} value={m.id} disabled={m.id === fromUser}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={transferTickets}
-              disabled={!fromUser || !toUser || fromUser === toUser || transferring}
-              style={{ width: "auto", alignSelf: "flex-start", fontSize: 13, padding: "8px 16px" }}
-            >
-              {transferring ? "Wird übertragen…" : "Jetzt übertragen"}
-            </button>
-            {transferResult && (
-              <p style={{ margin: 0, fontSize: 13, color: "#34d399" }}>✓ {transferResult}</p>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Properties list */}
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
