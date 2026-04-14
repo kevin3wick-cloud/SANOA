@@ -31,7 +31,7 @@ export function PushPermissionBanner() {
 
   // Check localStorage on mount
   useEffect(() => {
-    if (wasDismissed()) setDismissed(true); persistDismiss();
+    if (wasDismissed()) setDismissed(true);
   }, []);
 
   useEffect(() => {
@@ -136,7 +136,7 @@ export function PushPermissionBanner() {
             Tippe auf <strong>Teilen</strong> (□↑) und dann <strong>„Zum Home-Bildschirm"</strong> — danach kannst du Benachrichtigungen aktivieren.
           </span>
         </div>
-        <button onClick={() => setDismissed(true); persistDismiss()}
+        <button onClick={() => { setDismissed(true); persistDismiss(); }}
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}>
           <X size={16} />
         </button>
@@ -201,7 +201,7 @@ export function PushPermissionBanner() {
             {loading ? "Wird aktiviert …" : "Aktivieren"}
           </button>
           <button
-            onClick={() => setDismissed(true); persistDismiss()}
+            onClick={() => { setDismissed(true); persistDismiss(); }}
             style={{
               fontSize: 13,
               padding: "7px 16px",
@@ -216,7 +216,7 @@ export function PushPermissionBanner() {
         </div>
       </div>
       <button
-        onClick={() => setDismissed(true); persistDismiss()}
+        onClick={() => { setDismissed(true); persistDismiss(); }}
         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0 }}
       >
         <X size={16} />
