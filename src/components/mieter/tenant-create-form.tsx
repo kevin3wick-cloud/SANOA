@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { UserPlus, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Property = { id: string; name: string };
@@ -19,6 +19,7 @@ export function TenantCreateForm() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [feedback, setFeedback] = useState("");
   const [pending, setPending] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/properties")
@@ -67,6 +68,7 @@ export function TenantCreateForm() {
       setFeedback(
         "Mieter wurde erfasst. Zugang Mieter-Portal: dieselbe E-Mail und das gewählte Passwort unter /mieter-app/login."
       );
+      setOpen(false);
       router.refresh();
     } catch {
       setFeedback("Netzwerkfehler. Bitte erneut versuchen.");
@@ -76,13 +78,27 @@ export function TenantCreateForm() {
   }
 
   return (
-    <div className="card">
-      <h3 style={{ marginTop: 0 }}>Neuen Mieter erfassen</h3>
-      <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 13 }}>
-        Stammdaten für Tickets und Dokumente. Es wird automatisch ein Zugang zum Mieter-Portal
-        angelegt (Login mit E-Mail und Passwort).
-      </p>
-      <form className="stack" onSubmit={onSubmit}>
+    <div className="card stack">
+      {/* Toggle button */}
+      <button
+        type="button"
+        onClick={() => { setOpen(v => !v); setFeedback(""); }}
+        style={{
+          background: "none", border: "none", cursor: "pointer", padding: 0,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          width: "100%", textAlign: "left",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <UserPlus size={18} strokeWidth={1.75} style={{ color: "var(--accent)" }} aria-hidden />
+          <span style={{ fontWeight: 600, fontSize: 15 }}>Neuen Mieter erfassen</span>
+        </div>
+        {open
+          ? <ChevronUp size={16} style={{ color: "var(--muted)" }} />
+          : <ChevronDown size={16} style={{ color: "var(--muted)" }} />}
+      </button>
+
+      {open && <form className="stack" onSubmit={onSubmit} autoComplete="off">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -166,7 +182,7 @@ export function TenantCreateForm() {
           </span>
         </button>
         {feedback && <p className="muted">{feedback}</p>}
-      </form>
+      </form>}
     </div>
   );
 }

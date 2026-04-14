@@ -23,7 +23,7 @@ export default async function MieterDetailPage({ params }: MieterDetailProps) {
   // Never use request headers — Railway's internal proxy sets host to localhost:8080.
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    "https://sanoa-production.up.railway.app";
+    "https://app.sanoa.tech";
 
   const tenant = await (db.tenant as any).findUnique({
     where: { id },
