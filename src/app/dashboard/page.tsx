@@ -44,11 +44,17 @@ function priorityBadgeClass(level: TicketPriorityLevel) {
   return level === "dringend" ? "priority-badge priority-high" : "priority-badge priority-normal";
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const sessionUser = await getLandlordSessionUser();
   if ((sessionUser?.role as string) === "ADMIN") {
     redirect("/admin");
   }
+
+  const { filter = "" } = await searchParams;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orgId = (sessionUser as any)?.orgId ?? null;
@@ -59,13 +65,21 @@ export default async function DashboardPage() {
     ? { tenant: { orgId } }
     : { assignedToId: sessionUser?.id, tenant: { orgId } };
 
+  // Status filter from URL param
+  const statusWhere =
+    filter === "open"     ? { status: TicketStatus.OPEN } :
+    filter === "progress" ? { status: TicketStatus.IN_PROGRESS } :
+    filter === "done"     ? { status: TicketStatus.DONE } :
+    { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] as TicketStatus[] } };
+
   const [open, inProgress, done, actionTicketsRaw] = await Promise.all([
     db.ticket.count({ where: { status: TicketStatus.OPEN, ...visibilityWhere } }),
     db.ticket.count({ where: { status: TicketStatus.IN_PROGRESS, ...visibilityWhere } }),
     db.ticket.count({ where: { status: TicketStatus.DONE, ...visibilityWhere } }),
     db.ticket.findMany({
-      where: { status: { in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS] }, ...visibilityWhere },
-      include: { tenant: true, ...chatNotesInclude }
+      where: { ...statusWhere, ...visibilityWhere },
+      include: { tenant: true, ...chatNotesInclude },
+      orderBy: filter === "done" ? { updatedAt: "desc" } : { createdAt: "desc" },
     })
   ]);
 
@@ -84,58 +98,50 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-4">
-          <div className="card stat-card">
-            <div className="stat-card-inner">
-              <div className="stat-icon-wrap stat-icon-open">
-                <CircleAlert size={22} strokeWidth={1.75} aria-hidden />
-              </div>
-              <div>
-                <div className="muted">Offen</div>
-                <p className="stat-value">{open}</p>
-              </div>
-            </div>
-          </div>
-          <div className="card stat-card">
-            <div className="stat-card-inner">
-              <div className="stat-icon-wrap stat-icon-progress">
-                <CircleDot size={22} strokeWidth={1.75} aria-hidden />
-              </div>
-              <div>
-                <div className="muted">In Bearbeitung</div>
-                <p className="stat-value">{inProgress}</p>
-              </div>
-            </div>
-          </div>
-          <div className="card stat-card">
-            <div className="stat-card-inner">
-              <div className="stat-icon-wrap stat-icon-done">
-                <CircleCheck size={22} strokeWidth={1.75} aria-hidden />
-              </div>
-              <div>
-                <div className="muted">Erledigt</div>
-                <p className="stat-value">{done}</p>
-              </div>
-            </div>
-          </div>
-          <div className="card stat-card">
-            <div className="stat-card-inner">
-              <div className="stat-icon-wrap stat-icon-total">
-                <LayoutGrid size={22} strokeWidth={1.75} aria-hidden />
-              </div>
-              <div>
-                <div className="muted">Gesamt</div>
-                <p className="stat-value">{total}</p>
-              </div>
-            </div>
-          </div>
+          {[
+            { key: "open",     label: "Offen",          value: open,       icon: <CircleAlert size={22} strokeWidth={1.75} aria-hidden />, cls: "stat-icon-open" },
+            { key: "progress", label: "In Bearbeitung", value: inProgress, icon: <CircleDot   size={22} strokeWidth={1.75} aria-hidden />, cls: "stat-icon-progress" },
+            { key: "done",     label: "Erledigt",       value: done,       icon: <CircleCheck size={22} strokeWidth={1.75} aria-hidden />, cls: "stat-icon-done" },
+            { key: "",         label: "Gesamt",         value: total,      icon: <LayoutGrid  size={22} strokeWidth={1.75} aria-hidden />, cls: "stat-icon-total" },
+          ].map(({ key, label, value, icon, cls }) => {
+            const active = filter === key;
+            return (
+              <Link
+                key={label}
+                href={active ? "/dashboard" : `/dashboard${key ? `?filter=${key}` : ""}`}
+                className={`card stat-card stat-card-link${active ? " stat-card-active" : ""}`}
+                style={active ? {
+                  borderColor: "var(--accent)",
+                  background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
+                } : undefined}
+              >
+                <div className="stat-card-inner">
+                  <div className={`stat-icon-wrap ${cls}`}>{icon}</div>
+                  <div>
+                    <div className="muted" style={{ fontSize: 13 }}>{label}</div>
+                    <p className="stat-value">{value}</p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
         <div className="card dashboard-queue-card">
           <div className="dashboard-queue-head">
             <div>
-              <h3 className="dashboard-queue-title">Bearbeitungsliste</h3>
+              <h3 className="dashboard-queue-title">
+                {filter === "open"     ? "Offene Tickets" :
+                 filter === "progress" ? "Tickets in Bearbeitung" :
+                 filter === "done"     ? "Erledigte Tickets" :
+                 "Bearbeitungsliste"}
+              </h3>
               <p className="muted dashboard-queue-sub">
-                Offen und in Bearbeitung, sortiert nach Dringlichkeit und Alter.
+                {filter === "done"
+                  ? "Abgeschlossene Tickets."
+                  : filter
+                    ? "Gefilterte Ansicht — Karte nochmals klicken zum Zurücksetzen."
+                    : "Offen und in Bearbeitung, sortiert nach Dringlichkeit und Alter."}
               </p>
             </div>
           </div>
