@@ -69,39 +69,50 @@ export async function POST(request: NextRequest) {
 
   const archivedAt = archivedAtForLeaseEnd(leaseEnd);
 
-  const existingUser = await db.user.findUnique({
-    where: { email: emailRaw },
-    include: { tenant: true }
-  });
+  // Check for existing tenant with this email within THIS org only
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingTenant = await (db.tenant as any).findFirst({
+    where: { email: emailRaw, orgId },
+  }) as { id: string; archivedAt: Date | null } | null;
 
-  if (existingUser) {
-    const linkedTenant = (existingUser as any).tenant;
-
-    // Allow reactivation only if the linked tenant is archived
-    if (!linkedTenant || !linkedTenant.archivedAt) {
+  if (existingTenant) {
+    if (!existingTenant.archivedAt) {
       return NextResponse.json(
-        { error: "Diese E-Mail ist bereits vergeben (Vermieter- oder Mieter-Konto). Bitte andere E-Mail wählen." },
+        { error: "Diese E-Mail ist bei diesem Vermieter bereits vergeben. Bitte andere E-Mail wählen." },
         { status: 409 }
       );
     }
-
-    // Reactivate archived tenant
+    // Reactivate archived tenant in this org
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existingUser = await (db.user as any).findUnique({ where: { tenantId: existingTenant.id } });
     try {
       await db.$transaction(async (tx) => {
         await (tx.tenant as any).update({
-          where: { id: linkedTenant.id },
+          where: { id: existingTenant.id },
           data: { name, email: emailRaw, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null }
         });
-        await tx.user.update({
-          where: { id: existingUser.id },
-          data: { password, name }
-        });
+        if (existingUser) {
+          await tx.user.update({ where: { id: existingUser.id }, data: { password, name } });
+        }
       });
-      return NextResponse.json({ id: linkedTenant.id }, { status: 201 });
+      return NextResponse.json({ id: existingTenant.id }, { status: 201 });
     } catch (e) {
       throw e;
     }
   }
+
+  // Also check if email belongs to a landlord account (globally — landlords are always unique)
+  const landlordUser = await db.user.findUnique({ where: { email: emailRaw } });
+  if (landlordUser && landlordUser.role !== "MIETER") {
+    return NextResponse.json(
+      { error: "Diese E-Mail gehört bereits einem Vermieter-Konto." },
+      { status: 409 }
+    );
+  }
+
+  // New tenant — use email__orgId as User.email so same real email
+  // can exist across different landlord organisations
+  const userEmail = orgId ? `${emailRaw}__${orgId}` : emailRaw;
 
   try {
     const tenant = await db.$transaction(async (tx) => {
@@ -120,7 +131,7 @@ export async function POST(request: NextRequest) {
       });
       await tx.user.create({
         data: {
-          email: emailRaw,
+          email: userEmail,
           password,
           name,
           role: UserRole.MIETER,

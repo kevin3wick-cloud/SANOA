@@ -80,33 +80,31 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // Check for existing user with this email
-    const existingUser = await db.user.findUnique({
-      where: { email },
-      include: { tenant: true }
-    });
-
     const archivedAt = archivedAtForLeaseEnd(leaseEnd);
 
-    if (existingUser) {
-      // Only allow re-import if the linked tenant is archived (lease ended / manually archived)
-      const linkedTenant = (existingUser as any).tenant;
-      if (!linkedTenant || !linkedTenant.archivedAt) {
-        results.push({ row: rowNum, name, ok: false, error: `E-Mail «${email}» gehört bereits einem aktiven Mieter.` });
+    // Check for existing tenant with this email within THIS org only (not globally)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existingTenant = await (db.tenant as any).findFirst({
+      where: { email, orgId },
+    }) as { id: string; archivedAt: Date | null } | null;
+
+    if (existingTenant) {
+      if (!existingTenant.archivedAt) {
+        results.push({ row: rowNum, name, ok: false, error: `E-Mail «${email}» gehört bereits einem aktiven Mieter bei diesem Vermieter.` });
         continue;
       }
-
-      // Reactivate: update existing tenant + user with new data
+      // Reactivate archived tenant within this org
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingUser = await (db.user as any).findUnique({ where: { tenantId: existingTenant.id } });
       try {
         await db.$transaction(async (tx) => {
           await (tx.tenant as any).update({
-            where: { id: linkedTenant.id },
+            where: { id: existingTenant.id },
             data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId, magicToken: null }
           });
-          await tx.user.update({
-            where: { id: existingUser.id },
-            data: { password, name }
-          });
+          if (existingUser) {
+            await tx.user.update({ where: { id: existingUser.id }, data: { password, name } });
+          }
         });
         results.push({ row: rowNum, name, ok: true });
       } catch (e) {
@@ -116,7 +114,9 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // No existing user → create new tenant + user
+    // New tenant — store User.email as email__orgId so the same real email
+    // can exist across different landlord organisations
+    const userEmail = orgId ? `${email}__${orgId}` : email;
     try {
       await db.$transaction(async (tx) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           data: { name, email, phone, apartment, leaseStart, leaseEnd, archivedAt, orgId }
         });
         await tx.user.create({
-          data: { email, password, name, role: UserRole.MIETER, tenantId: tenant.id }
+          data: { email: userEmail, password, name, role: UserRole.MIETER, tenantId: tenant.id }
         });
       });
       results.push({ row: rowNum, name, ok: true });
