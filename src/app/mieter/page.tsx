@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { TenantCreateForm } from "@/components/mieter/tenant-create-form";
 import { TenantImportForm } from "@/components/mieter/tenant-import-form";
+import { TenantPdfImportForm } from "@/components/mieter/tenant-pdf-import-form";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getLandlordSessionUser } from "@/lib/landlord-auth";
@@ -13,21 +14,28 @@ import { archiveTenantsPastLeaseEnd } from "@/lib/tenant-lease";
 export default async function MieterPage() {
   await archiveTenantsPastLeaseEnd();
   const user = await getLandlordSessionUser();
+  const orgId = (user as any)?.orgId ?? null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenants = await (db.tenant as any).findMany({
-    where: { archivedAt: null, ...tenantOrgFilter(user as any) },
-    select: {
-      id: true,
-      name: true,
-      apartment: true,
-      leaseEnd: true,
-      pendingName: true,
-      property: { select: { name: true } },
-      _count: { select: { tickets: true } },
-    },
-    orderBy: { name: "asc" },
-  });
+  const [tenants, properties] = await Promise.all([
+    (db.tenant as any).findMany({
+      where: { archivedAt: null, ...tenantOrgFilter(user as any) },
+      select: {
+        id: true,
+        name: true,
+        apartment: true,
+        leaseEnd: true,
+        pendingName: true,
+        property: { select: { name: true } },
+        _count: { select: { tickets: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    (db.property as any).findMany({
+      where: orgId ? { orgId } : {},
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <AppShell>
@@ -43,6 +51,7 @@ export default async function MieterPage() {
           </p>
         </div>
         <TenantCreateForm />
+        <TenantPdfImportForm properties={properties} />
         <TenantImportForm />
         <div className="card">
           {tenants.length === 0 ? (
