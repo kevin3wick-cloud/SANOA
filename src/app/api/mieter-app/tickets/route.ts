@@ -5,6 +5,7 @@ import { hasUnreadFromLandlordForTenant } from "@/lib/ticket-chat-read";
 import { getMieterSessionUser } from "@/lib/tenant-auth";
 import { db } from "@/lib/db";
 import { detectUrgency, analyzeTicketPhoto } from "@/lib/ai";
+import { onTicketCreated } from "@/lib/agent-triggers";
 import { isTicketCategory } from "@/mieter-app/options";
 
 export const runtime = "nodejs";
@@ -194,6 +195,9 @@ export async function POST(request: NextRequest) {
   } catch {
     // AI enrichment failure must never block ticket creation
   }
+
+  // Fire autopilot trigger in background — never blocks the response
+  void onTicketCreated(ticket.id);
 
   return NextResponse.json({ id: ticket.id }, { status: 201 });
 }

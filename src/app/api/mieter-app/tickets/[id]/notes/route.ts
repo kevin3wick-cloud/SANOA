@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMieterSessionUser } from "@/lib/tenant-auth";
 import { db } from "@/lib/db";
+import { onTenantMessage } from "@/lib/agent-triggers";
 
 type Body = {
   text?: string;
@@ -39,6 +40,9 @@ export async function POST(
       isTenantAuthor: true
     }
   });
+
+  // Auto-reply trigger in background — never blocks response
+  void onTenantMessage(ticketId, text);
 
   return NextResponse.json({ ok: true });
 }
