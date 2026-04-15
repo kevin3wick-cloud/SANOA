@@ -5,21 +5,25 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart2,
+  Bot,
   Building2,
   FileText,
   LayoutDashboard,
   Settings2,
   Users,
-  UsersRound
+  UsersRound,
+  Wrench
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/reporting", label: "Auswertung", icon: BarChart2 },
-  { href: "/mieter", label: "Mieter", icon: Users },
+  { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
+  { href: "/agent",          label: "KI-Agent",       icon: Bot },
+  { href: "/reporting",      label: "Auswertung",     icon: BarChart2 },
+  { href: "/mieter",         label: "Mieter",         icon: Users },
   { href: "/liegenschaften", label: "Liegenschaften", icon: Building2 },
-  { href: "/dokumente", label: "Dokumente", icon: FileText },
-  { href: "/einstellungen", label: "Einstellungen", icon: Settings2 }
+  { href: "/handwerker",     label: "Handwerker",     icon: Wrench },
+  { href: "/dokumente",      label: "Dokumente",      icon: FileText },
+  { href: "/einstellungen",  label: "Einstellungen",  icon: Settings2 },
 ];
 
 function isNavActive(href: string, pathname: string) {

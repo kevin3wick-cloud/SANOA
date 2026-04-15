@@ -173,6 +173,17 @@ model PushSubscription {
   createdAt DateTime @default(now())
 }
 
+model Contractor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  trade     String?  // e.g. Sanitär, Elektro, Maler
+  orgId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Document {
   id                 String             @id @default(cuid())
   name               String
