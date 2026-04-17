@@ -2,8 +2,11 @@
  * Inbound Email Webhook (Resend)
  *
  * Resend POSTs here when a contractor replies to a ticket email.
- * We extract the ticket ID from the subject, parse the appointment
- * with Claude, create a TicketAppointmentProposal, and notify the tenant.
+ * The webhook payload contains only metadata (email_id, from, to, subject).
+ * We fetch the actual email body via the Resend Received Emails API,
+ * extract the ticket ID from the To address (ticket-{id}@send.sanoa.tech)
+ * or fall back to the subject line, parse the appointment with Claude,
+ * create a TicketAppointmentProposal, and notify the tenant.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,8 +15,18 @@ import { extractAppointmentFromEmail } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
+// Extract ticket ID from To address: "ticket-abc123@send.sanoa.tech"
+function extractTicketIdFromTo(to: string | string[]): string | null {
+  const addresses = Array.isArray(to) ? to : [to];
+  for (const addr of addresses) {
+    const match = addr.match(/ticket-([a-z0-9]+)@/i);
+    if (match) return match[1];
+  }
+  return null;
+}
+
 // Extract ticket ID from subject line: "[TKT-abc123]"
-function extractTicketId(subject: string): string | null {
+function extractTicketIdFromSubject(subject: string): string | null {
   const match = subject.match(/\[TKT-([a-z0-9]+)\]/i);
   return match ? match[1] : null;
 }
@@ -30,27 +43,66 @@ function parseDate(dateStr: string, timeStr: string | null): Date | null {
   }
 }
 
+// Fetch the actual email body from Resend Received Emails API
+async function fetchEmailBody(emailId: string): Promise<string | null> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+
+  try {
+    const res = await fetch(`https://api.resend.com/emails/${emailId}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) {
+      console.warn("[Webhook] Resend API returned", res.status, "for email", emailId);
+      return null;
+    }
+    const data = await res.json();
+    // Prefer plain text, fall back to HTML
+    return data.text ?? data.html ?? null;
+  } catch (e) {
+    console.error("[Webhook] Failed to fetch email body:", e);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
 
-    // Resend inbound email payload
-    const subject: string = body.subject ?? body.headers?.subject ?? "";
-    const textContent: string = body.text ?? body.plain ?? body.html ?? "";
-    const fromEmail: string = body.from ?? "";
+    // Resend inbound webhook payload format:
+    // { type: "email.received", data: { email_id, from, to, subject, ... } }
+    // Older / direct-parse fallback: body.subject, body.text, body.from
+    const data = body.data ?? body;
+    const emailId: string = data.email_id ?? data.id ?? "";
+    const subject: string = data.subject ?? body.subject ?? body.headers?.subject ?? "";
+    const fromEmail: string = data.from ?? body.from ?? "";
+    const toAddress: string | string[] = data.to ?? body.to ?? "";
 
-    if (!subject || !textContent) {
+    if (!subject && !emailId) {
       return NextResponse.json({ ok: true, skipped: "no content" });
     }
 
-    // 1. Find ticket ID in subject
-    const ticketId = extractTicketId(subject);
+    // 1. Determine ticket ID — prefer To address, fall back to subject
+    let ticketId = extractTicketIdFromTo(toAddress);
+    if (!ticketId) ticketId = extractTicketIdFromSubject(subject);
+
     if (!ticketId) {
-      console.log("[Webhook] No ticket ID in subject:", subject);
+      console.log("[Webhook] No ticket ID found. Subject:", subject, "To:", toAddress);
       return NextResponse.json({ ok: true, skipped: "no ticket id" });
     }
 
-    // 2. Load ticket + tenant
+    // 2. Fetch email body from Resend API (webhook payload has no body)
+    let textContent = body.text ?? body.plain ?? "";
+    if (!textContent && emailId) {
+      textContent = (await fetchEmailBody(emailId)) ?? "";
+    }
+
+    if (!textContent) {
+      console.log("[Webhook] Could not retrieve email body for", emailId);
+      return NextResponse.json({ ok: true, skipped: "no email body" });
+    }
+
+    // 3. Load ticket + tenant
     const ticket = await (db as any).ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -63,7 +115,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, skipped: "ticket not found" });
     }
 
-    // 3. Save raw contractor message as internal note
+    // 4. Save raw contractor message as internal note
     await db.ticketNote.create({
       data: {
         ticketId,
@@ -73,7 +125,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // 4. Ask Claude to extract appointment proposal
+    // 5. Ask Claude to extract appointment proposal
     const proposal = await extractAppointmentFromEmail(textContent);
 
     if (!proposal) {
@@ -89,7 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, skipped: "no appointment found" });
     }
 
-    // 5. Parse date and create TicketAppointmentProposal
+    // 6. Parse date and create TicketAppointmentProposal
     const startAt = parseDate(proposal.date, proposal.time);
     await (db as any).ticketAppointmentProposal.create({
       data: {
@@ -100,7 +152,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // 6. Post chat message visible to tenant
+    // 7. Post chat message visible to tenant
     const tenantMsg = `🔧 Der Handwerker schlägt folgenden Termin vor:\n\n📅 ${proposal.date}${proposal.time ? ` um ${proposal.time} Uhr` : ""}\n\n${proposal.message}\n\nBitte bestätigen oder ablehnen Sie den Termin direkt hier im Chat.`;
 
     await db.ticketNote.create({
@@ -112,7 +164,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // 7. Send push notification to tenant (best-effort)
+    // 8. Send push notification to tenant (best-effort)
     try {
       const subs = ticket.tenant?.pushSubscriptions ?? [];
       if (subs.length > 0) {

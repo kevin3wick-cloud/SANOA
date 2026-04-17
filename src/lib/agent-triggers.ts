@@ -25,7 +25,8 @@ async function sendEmail(
   to: string,
   subject: string,
   text: string,
-  orgId?: string | null
+  orgId?: string | null,
+  ticketReplyTo?: string | null  // e.g. "ticket-abc123@send.sanoa.tech"
 ): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) { console.log("[Agent] No RESEND_API_KEY — skipping email to", to); return; }
@@ -40,6 +41,9 @@ async function sendEmail(
       if (settings?.replyToEmail) replyTo = settings.replyToEmail;
     } catch { /* best-effort */ }
   }
+
+  // Ticket-specific reply-to takes priority — routes contractor replies back via Resend inbound
+  if (ticketReplyTo) replyTo = ticketReplyTo;
 
   const { Resend } = await import("resend");
   const resend = new Resend(key);
@@ -144,7 +148,8 @@ Sanoa Hausverwaltungs-System`;
         contractor.email,
         `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
         emailText,
-        orgId
+        orgId,
+        `ticket-${ticketId}@send.sanoa.tech`  // Reply routes back via Resend inbound webhook
       );
     }
 
