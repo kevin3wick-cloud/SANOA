@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { AppointmentProposalStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getMieterSessionUser } from "@/lib/tenant-auth";
+import { onProposalConfirmed, onProposalRejected } from "@/lib/agent-triggers";
 
 type Body = {
   decision?: string;
+  availabilityMessage?: string; // sent by frontend on rejection
 };
 
 export async function POST(
   request: NextRequest,
-  {
-    params
-  }: { params: Promise<{ id: string; proposalId: string }> }
+  { params }: { params: Promise<{ id: string; proposalId: string }> }
 ) {
   const user = await getMieterSessionUser();
   if (!user?.tenantId) {
@@ -33,9 +33,9 @@ export async function POST(
     where: {
       id: proposalId,
       ticketId,
-      status: AppointmentProposalStatus.PENDING
+      status: AppointmentProposalStatus.PENDING,
     },
-    include: { ticket: true }
+    include: { ticket: true },
   });
 
   if (!proposal || proposal.ticket.tenantId !== user.tenantId) {
@@ -49,9 +49,17 @@ export async function POST(
         decision === "confirm"
           ? AppointmentProposalStatus.CONFIRMED
           : AppointmentProposalStatus.REJECTED,
-      respondedAt: new Date()
-    }
+      respondedAt: new Date(),
+    },
   });
+
+  // Fire-and-forget: notify contractor
+  if (decision === "confirm") {
+    void onProposalConfirmed(ticketId, proposal.message, proposal.startAt);
+  } else {
+    const availabilityMessage = body.availabilityMessage ?? "Keine weiteren Details angegeben.";
+    void onProposalRejected(ticketId, availabilityMessage);
+  }
 
   return NextResponse.json({ ok: true });
 }

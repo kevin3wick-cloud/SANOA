@@ -216,3 +216,124 @@ export async function onTenantMessage(ticketId: string, tenantMessage: string): 
     console.error("[Agent] onTenantMessage error:", e);
   }
 }
+
+// ── Helper: find contractors for a ticket ─────────────────────────────────────
+
+async function getContractorsForTicket(ticketId: string): Promise<{ name: string; email: string }[]> {
+  const ticket = await (db.ticket as any).findUnique({
+    where: { id: ticketId },
+    include: { tenant: { select: { orgId: true } } },
+  });
+  if (!ticket) return [];
+  const trades = CATEGORY_TO_TRADE[ticket.category as string] ?? ["Sonstiges"];
+  const orgId = ticket.tenant?.orgId ?? null;
+  return (db.contractor as any).findMany({
+    where: { trade: { in: trades }, ...(orgId ? { orgId } : {}) },
+    select: { name: true, email: true },
+  });
+}
+
+// ── Trigger 3: Tenant confirms appointment ────────────────────────────────────
+
+/**
+ * Sends a confirmation email to the contractor when the tenant confirms.
+ */
+export async function onProposalConfirmed(
+  ticketId: string,
+  proposalMessage: string,
+  startAt: Date | null
+): Promise<void> {
+  try {
+    const ticket = await (db.ticket as any).findUnique({
+      where: { id: ticketId },
+      include: { tenant: { select: { name: true, apartment: true, orgId: true } } },
+    });
+    if (!ticket) return;
+
+    const orgId: string | null = ticket.tenant?.orgId ?? null;
+    const contractors = await getContractorsForTicket(ticketId);
+    if (contractors.length === 0) return;
+
+    const dateLabel = startAt
+      ? startAt.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })
+      : "";
+    const timeLabel = startAt
+      ? startAt.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    for (const contractor of contractors) {
+      const text = `Guten Tag ${contractor.name},
+
+der Mieter hat den Terminvorschlag BESTÄTIGT.
+
+Ticket: ${ticket.title}
+Mieter: ${ticket.tenant?.name}
+Wohnung: ${ticket.tenant?.apartment}
+${dateLabel ? `Bestätigter Termin: ${dateLabel}${timeLabel ? ` um ${timeLabel} Uhr` : ""}` : `Vorschlag: ${proposalMessage}`}
+
+Bitte erscheinen Sie zum vereinbarten Termin.
+
+Mit freundlichen Grüssen
+Sanoa Hausverwaltungs-System`;
+
+      await sendEmail(
+        contractor.email,
+        `✅ Termin bestätigt — ${ticket.title} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
+        text,
+        orgId
+      );
+    }
+  } catch (e) {
+    console.error("[Agent] onProposalConfirmed error:", e);
+  }
+}
+
+// ── Trigger 4: Tenant rejects appointment ─────────────────────────────────────
+
+/**
+ * Sends the tenant's availability to the contractor and includes a new proposal link.
+ */
+export async function onProposalRejected(
+  ticketId: string,
+  availabilityMessage: string
+): Promise<void> {
+  try {
+    const ticket = await (db.ticket as any).findUnique({
+      where: { id: ticketId },
+      include: { tenant: { select: { name: true, apartment: true, orgId: true } } },
+    });
+    if (!ticket) return;
+
+    const orgId: string | null = ticket.tenant?.orgId ?? null;
+    const contractors = await getContractorsForTicket(ticketId);
+    if (contractors.length === 0) return;
+
+    for (const contractor of contractors) {
+      const text = `Guten Tag ${contractor.name},
+
+der Mieter hat den Terminvorschlag leider ABGELEHNT.
+
+Ticket: ${ticket.title}
+Mieter: ${ticket.tenant?.name}
+Wohnung: ${ticket.tenant?.apartment}
+
+Verfügbarkeit des Mieters:
+${availabilityMessage}
+
+Bitte reichen Sie einen neuen Terminvorschlag ein:
+https://app.sanoa.tech/contractor/vorschlag/${ticketId}
+
+Mit freundlichen Grüssen
+Sanoa Hausverwaltungs-System`;
+
+      await sendEmail(
+        contractor.email,
+        `❌ Termin abgelehnt — bitte neuen Vorschlag — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
+        text,
+        orgId
+      );
+    }
+  } catch (e) {
+    console.error("[Agent] onProposalRejected error:", e);
+  }
+}

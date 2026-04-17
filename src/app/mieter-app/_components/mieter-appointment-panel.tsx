@@ -321,14 +321,18 @@ export function MieterAppointmentPanel({ ticketId, ticketTitle, pendingProposal,
   async function rejectWithAvailability(proposalId: string, availabilityMsg: string) {
     setError(""); setBusy(true);
     try {
-      // 1. reject the proposal
+      // 1. reject the proposal — pass availability so contractor gets notified
       const res1 = await fetch(
         `/api/mieter-app/tickets/${ticketId}/appointment-proposals/${proposalId}/respond`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision: "reject" }) }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision: "reject", availabilityMessage: availabilityMsg }),
+        }
       );
       if (!res1.ok) { setError("Absage fehlgeschlagen."); return; }
 
-      // 2. send availability as a note
+      // 2. also post availability as a chat note so tenant sees it
       await fetch(`/api/mieter-app/tickets/${ticketId}/notes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
