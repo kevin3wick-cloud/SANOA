@@ -149,7 +149,7 @@ Sanoa Hausverwaltungs-System`;
         `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
         emailText,
         orgId,
-        `ticket-${ticketId}@send.sanoa.tech`  // Reply routes back via Resend inbound webhook
+        `ticket-${ticketId}@quautoliod.resend.app`  // Reply routes back via Resend inbound webhook
       );
     }
 
