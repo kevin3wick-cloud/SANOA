@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation";
 type Message = { role: "user" | "assistant"; text: string };
 type ToolCall = { tool: string; result: string };
 
+const STORAGE_KEY = "sanoa_agent_chat";
+const INITIAL_MESSAGE: Message = {
+  role: "assistant",
+  text: "Hallo! Ich bin dein KI-Agent. Ich kann Mieter anlegen, Liegenschaften verwalten, Handwerker kontaktieren und vieles mehr.\n\nWas kann ich für dich tun?",
+};
+
 const EXAMPLES = [
   "Leg eine neue Liegenschaft 'Bahnhofstrasse 12' an",
   "Zeige mir alle Liegenschaften",
@@ -17,17 +23,34 @@ const EXAMPLES = [
 
 export function AgentChat() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      text: "Hallo! Ich bin dein KI-Agent. Ich kann Mieter anlegen, Liegenschaften verwalten, Handwerker kontaktieren und vieles mehr.\n\nWas kann ich für dich tun?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [toolLog, setToolLog] = useState<ToolCall[]>([]);
   const [showTools, setShowTools] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { messages: savedMessages, toolLog: savedToolLog } = JSON.parse(saved);
+        if (savedMessages?.length > 0) setMessages(savedMessages);
+        if (savedToolLog?.length > 0) { setToolLog(savedToolLog); setShowTools(false); }
+      }
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  // Save to localStorage whenever messages or toolLog change
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, toolLog }));
+    } catch { /* ignore */ }
+  }, [messages, toolLog, hydrated]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,8 +99,27 @@ export function AgentChat() {
     void send();
   }
 
+  function clearChat() {
+    setMessages([INITIAL_MESSAGE]);
+    setToolLog([]);
+    setShowTools(false);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" onClick={clearChat}
+          style={{
+            fontSize: 12, padding: "5px 12px", borderRadius: 20,
+            background: "transparent", border: "1px solid var(--border)",
+            color: "var(--muted)", cursor: "pointer",
+          }}>
+          Chat leeren
+        </button>
+      </div>
+
       {/* Chat window */}
       <div style={{
         background: "var(--surface)", border: "1px solid var(--border)",
