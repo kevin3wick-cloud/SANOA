@@ -135,14 +135,14 @@ Titel: ${ticket.title}
 Beschreibung: ${ticket.description}
 ${ticket.location ? `Ort: ${ticket.location}` : ""}
 
-Bitte melden Sie sich direkt beim Mieter oder teilen Sie uns Ihre Verfügbarkeit mit, damit wir einen Termin koordinieren können.
+Bitte antworten Sie direkt auf diese E-Mail mit Ihrer Verfügbarkeit — wir koordinieren dann den Termin mit dem Mieter.
 
 Mit freundlichen Grüssen
 Sanoa Hausverwaltungs-System`;
 
       await sendEmail(
         contractor.email,
-        `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment}`,
+        `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
         emailText,
         orgId
       );

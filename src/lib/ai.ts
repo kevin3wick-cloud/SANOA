@@ -198,3 +198,42 @@ Schreibe NUR die Antwort, keine Erklärung. Auf Deutsch. Max. 2-3 Sätze.`,
     return "";
   }
 }
+
+/**
+ * Extracts an appointment proposal from a contractor's reply email.
+ * Returns null if no appointment can be found.
+ */
+export async function extractAppointmentFromEmail(
+  emailText: string
+): Promise<{ date: string; time: string | null; message: string } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [
+        {
+          role: "user",
+          content: `Du analysierst eine E-Mail-Antwort eines Handwerkers auf eine Schadensmeldung. Extrahiere einen Terminvorschlag falls vorhanden.
+
+E-Mail-Text:
+${emailText}
+
+Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text davor/danach):
+- Falls ein Termin vorgeschlagen wird: {"hasProposal": true, "date": "DD.MM.YYYY", "time": "HH:MM oder null", "message": "kurze deutsche Zusammenfassung des Vorschlags in 1 Satz"}
+- Falls kein konkreter Termin vorgeschlagen wird: {"hasProposal": false}`,
+        },
+      ],
+    });
+
+    const text =
+      response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const json = JSON.parse(text.replace(/```json|```/g, "").trim());
+    if (!json.hasProposal) return null;
+    return { date: json.date, time: json.time ?? null, message: json.message };
+  } catch {
+    return null;
+  }
+}
