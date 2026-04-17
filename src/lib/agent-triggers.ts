@@ -139,7 +139,8 @@ Titel: ${ticket.title}
 Beschreibung: ${ticket.description}
 ${ticket.location ? `Ort: ${ticket.location}` : ""}
 
-Bitte antworten Sie direkt auf diese E-Mail mit Ihrer Verfügbarkeit — wir koordinieren dann den Termin mit dem Mieter.
+Um einen Terminvorschlag direkt einzureichen, klicken Sie bitte auf folgenden Link:
+https://app.sanoa.tech/contractor/vorschlag/${ticketId}
 
 Mit freundlichen Grüssen
 Sanoa Hausverwaltungs-System`;
