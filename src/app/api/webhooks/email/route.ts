@@ -91,8 +91,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, skipped: "no ticket id" });
     }
 
-    // 2. Fetch email body from Resend API (webhook payload has no body)
-    let textContent = body.text ?? body.plain ?? "";
+    // 2. Get email body — Resend inbound includes text/html directly in data
+    let textContent = data.text ?? data.html ?? body.text ?? body.plain ?? "";
+    // Fallback: fetch via Resend API if body wasn't in payload
     if (!textContent && emailId) {
       textContent = (await fetchEmailBody(emailId)) ?? "";
     }
