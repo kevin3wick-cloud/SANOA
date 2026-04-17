@@ -69,22 +69,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
 
+    // Log raw payload keys so we can see exactly what Resend sends
+    console.log("[Webhook] Raw payload keys:", Object.keys(body));
+    console.log("[Webhook] body.type:", body.type);
+    console.log("[Webhook] body.data keys:", body.data ? Object.keys(body.data) : "no data");
+    console.log("[Webhook] body.data.to:", body.data?.to);
+    console.log("[Webhook] body.data.subject:", body.data?.subject);
+    console.log("[Webhook] body.data.text (first 100):", (body.data?.text ?? "").slice(0, 100));
+
     // Resend inbound webhook payload format:
-    // { type: "email.received", data: { email_id, from, to, subject, ... } }
-    // Older / direct-parse fallback: body.subject, body.text, body.from
+    // { type: "email.received", data: { email_id, from, to, subject, text, html, ... } }
     const data = body.data ?? body;
     const emailId: string = data.email_id ?? data.id ?? "";
     const subject: string = data.subject ?? body.subject ?? body.headers?.subject ?? "";
     const fromEmail: string = data.from ?? body.from ?? "";
     const toAddress: string | string[] = data.to ?? body.to ?? "";
 
+    console.log("[Webhook] Parsed — emailId:", emailId, "| subject:", subject, "| to:", toAddress);
+
     if (!subject && !emailId) {
+      console.log("[Webhook] Skipping: no subject and no emailId");
       return NextResponse.json({ ok: true, skipped: "no content" });
     }
 
     // 1. Determine ticket ID — prefer To address, fall back to subject
     let ticketId = extractTicketIdFromTo(toAddress);
     if (!ticketId) ticketId = extractTicketIdFromSubject(subject);
+
+    console.log("[Webhook] Ticket ID:", ticketId);
 
     if (!ticketId) {
       console.log("[Webhook] No ticket ID found. Subject:", subject, "To:", toAddress);
@@ -93,13 +105,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // 2. Get email body — Resend inbound includes text/html directly in data
     let textContent = data.text ?? data.html ?? body.text ?? body.plain ?? "";
+    console.log("[Webhook] textContent from payload (first 100):", textContent.slice(0, 100));
+
     // Fallback: fetch via Resend API if body wasn't in payload
     if (!textContent && emailId) {
+      console.log("[Webhook] No text in payload, fetching via API for emailId:", emailId);
       textContent = (await fetchEmailBody(emailId)) ?? "";
+      console.log("[Webhook] API fetch result (first 100):", textContent.slice(0, 100));
     }
 
     if (!textContent) {
-      console.log("[Webhook] Could not retrieve email body for", emailId);
+      console.log("[Webhook] Skipping: could not get email body");
       return NextResponse.json({ ok: true, skipped: "no email body" });
     }
 
@@ -127,7 +143,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // 5. Ask Claude to extract appointment proposal
+    console.log("[Webhook] Calling extractAppointmentFromEmail...");
     const proposal = await extractAppointmentFromEmail(textContent);
+    console.log("[Webhook] Proposal result:", JSON.stringify(proposal));
 
     if (!proposal) {
       // No appointment found — add internal note
