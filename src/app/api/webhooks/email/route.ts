@@ -152,19 +152,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // 7. Post chat message visible to tenant
-    const tenantMsg = `🔧 Der Handwerker schlägt folgenden Termin vor:\n\n📅 ${proposal.date}${proposal.time ? ` um ${proposal.time} Uhr` : ""}\n\n${proposal.message}\n\nBitte bestätigen oder ablehnen Sie den Termin direkt hier im Chat.`;
-
-    await db.ticketNote.create({
-      data: {
-        ticketId,
-        text: tenantMsg,
-        isInternal: false,
-        isTenantAuthor: false,
-      },
-    });
-
-    // 8. Send push notification to tenant (best-effort)
+    // 7. Send push notification to tenant (best-effort)
     try {
       const subs = ticket.tenant?.pushSubscriptions ?? [];
       if (subs.length > 0) {
