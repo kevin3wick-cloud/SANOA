@@ -21,17 +21,34 @@ const CATEGORY_TO_TRADE: Record<string, string[]> = {
 
 // ── Email sender (Resend) ─────────────────────────────────────────────────────
 
-async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  orgId?: string | null
+): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) { console.log("[Agent] No RESEND_API_KEY — skipping email to", to); return; }
+
+  // Load org-specific sender name + reply-to
+  let senderName = "Sanoa Hausverwaltung";
+  let replyTo: string | undefined;
+  if (orgId) {
+    try {
+      const settings = await (db as any).orgSettings.findUnique({ where: { orgId } });
+      if (settings?.senderName) senderName = settings.senderName;
+      if (settings?.replyToEmail) replyTo = settings.replyToEmail;
+    } catch { /* best-effort */ }
+  }
 
   const { Resend } = await import("resend");
   const resend = new Resend(key);
   await resend.emails.send({
-    from: "Sanoa KI-Agent <noreply@sanoa.tech>",
+    from: `${senderName} <noreply@sanoa.tech>`,
     to,
     subject,
     text,
+    ...(replyTo ? { replyTo } : {}),
   });
 }
 
@@ -126,7 +143,8 @@ Sanoa Hausverwaltungs-System`;
       await sendEmail(
         contractor.email,
         `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment}`,
-        emailText
+        emailText,
+        orgId
       );
     }
 

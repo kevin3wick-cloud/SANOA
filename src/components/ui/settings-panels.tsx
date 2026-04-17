@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 
 type UserRow = {
   id: string;
@@ -99,6 +99,93 @@ function ChangePasswordForm() {
   );
 }
 
+function EmailSettingsPanel() {
+  const [senderName, setSenderName] = useState("");
+  const [replyToEmail, setReplyToEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/einstellungen/email")
+      .then(r => r.json())
+      .then(d => { setSenderName(d.senderName ?? ""); setReplyToEmail(d.replyToEmail ?? ""); })
+      .catch(() => {});
+  }, []);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFeedback(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/einstellungen/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderName, replyToEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "err", msg: data.error ?? "Fehler beim Speichern." });
+      } else {
+        setFeedback({ type: "ok", msg: "Einstellungen gespeichert." });
+      }
+    } catch {
+      setFeedback({ type: "err", msg: "Netzwerkfehler." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card stack">
+      <div>
+        <h3 style={{ margin: 0 }}>E-Mail Absender</h3>
+        <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+          Automatische E-Mails an Handwerker werden in eurem Namen versendet.
+          Antworten gehen direkt an eure Adresse.
+        </p>
+      </div>
+      <form className="stack" onSubmit={handleSubmit}>
+        <div>
+          <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+            Absendername
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Hausverwaltung Muster AG"
+            value={senderName}
+            onChange={e => setSenderName(e.target.value)}
+          />
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--muted)" }}>
+            Erscheint als Absender beim Handwerker: <em>{senderName || "Sanoa Hausverwaltung"} &lt;noreply@sanoa.tech&gt;</em>
+          </p>
+        </div>
+        <div>
+          <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+            Antwort-Adresse (Reply-To)
+          </label>
+          <input
+            type="email"
+            placeholder="z.B. info@ihre-hausverwaltung.ch"
+            value={replyToEmail}
+            onChange={e => setReplyToEmail(e.target.value)}
+          />
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--muted)" }}>
+            Wenn der Handwerker antwortet, landet die E-Mail direkt bei euch.
+          </p>
+        </div>
+        <button type="submit" disabled={loading}>
+          {loading ? "Wird gespeichert…" : "Speichern"}
+        </button>
+      </form>
+      {feedback && (
+        <p style={{ margin: 0, fontSize: 13, color: feedback.type === "err" ? "#f87171" : "#34d399" }}>
+          {feedback.msg}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPanels({ currentUserRole, currentUserName, currentUserEmail }: SettingsPanelsProps) {
   const isAdmin = currentUserRole === "ADMIN";
 
@@ -168,6 +255,8 @@ export function SettingsPanels({ currentUserRole, currentUserName, currentUserEm
 
   return (
     <div className="stack">
+      <EmailSettingsPanel />
+
       <div className="card">
         <h3>Mein Konto</h3>
         <p className="muted" style={{ margin: "4px 0 0" }}>
