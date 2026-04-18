@@ -12,6 +12,7 @@ const TRADES = [
 type Contractor = {
   id: string;
   name: string;
+  contactPerson: string | null;
   email: string;
   phone: string | null;
   trade: string | null;
@@ -21,7 +22,7 @@ export function HandwerkerPanel({ initialContractors }: { initialContractors: Co
   const router = useRouter();
   const [contractors, setContractors] = useState<Contractor[]>(initialContractors);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", trade: "" });
+  const [form, setForm] = useState({ name: "", contactPerson: "", email: "", phone: "", trade: "" });
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Contractor>>({});
@@ -90,10 +91,11 @@ export function HandwerkerPanel({ initialContractors }: { initialContractors: Co
         <div className="card stack">
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Neuer Handwerker</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <input placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ fontSize: 13 }} autoComplete="off" />
-            <input placeholder="E-Mail" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={{ fontSize: 13 }} autoComplete="off" />
+            <input placeholder="Firmenname *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ fontSize: 13 }} autoComplete="off" />
+            <input placeholder="Ansprechperson (optional)" value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} style={{ fontSize: 13 }} autoComplete="off" />
+            <input placeholder="E-Mail *" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={{ fontSize: 13 }} autoComplete="off" />
             <input placeholder="Telefon (optional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={{ fontSize: 13 }} />
-            <select value={form.trade} onChange={e => setForm(f => ({ ...f, trade: e.target.value }))} style={{ fontSize: 13 }}>
+            <select value={form.trade} onChange={e => setForm(f => ({ ...f, trade: e.target.value }))} style={{ fontSize: 13, gridColumn: "1/-1" }}>
               <option value="">Fachbereich wählen…</option>
               {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -136,10 +138,11 @@ export function HandwerkerPanel({ initialContractors }: { initialContractors: Co
               }}>
                 {editId === c.id ? (
                   <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <input defaultValue={c.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} style={{ fontSize: 13 }} />
+                    <input defaultValue={c.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Firmenname" style={{ fontSize: 13 }} />
+                    <input defaultValue={c.contactPerson ?? ""} onChange={e => setEditForm(f => ({ ...f, contactPerson: e.target.value }))} placeholder="Ansprechperson (optional)" style={{ fontSize: 13 }} />
                     <input defaultValue={c.email} type="email" onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} style={{ fontSize: 13 }} />
                     <input defaultValue={c.phone ?? ""} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="Telefon" style={{ fontSize: 13 }} />
-                    <select defaultValue={c.trade ?? ""} onChange={e => setEditForm(f => ({ ...f, trade: e.target.value }))} style={{ fontSize: 13 }}>
+                    <select defaultValue={c.trade ?? ""} onChange={e => setEditForm(f => ({ ...f, trade: e.target.value }))} style={{ fontSize: 13, gridColumn: "1/-1" }}>
                       <option value="">Fachbereich…</option>
                       {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
@@ -158,10 +161,11 @@ export function HandwerkerPanel({ initialContractors }: { initialContractors: Co
                   <>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{c.name}</p>
+                      {c.contactPerson && <p style={{ margin: "1px 0 0", fontSize: 12, color: "var(--accent)" }}>👤 {c.contactPerson}</p>}
                       <p style={{ margin: "2px 0 0", fontSize: 13, color: "var(--muted)" }}>{c.email}{c.phone ? ` · ${c.phone}` : ""}</p>
                     </div>
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                      <button type="button" onClick={() => { setEditId(c.id); setEditForm({ name: c.name, email: c.email, phone: c.phone ?? "", trade: c.trade ?? "" }); }}
+                      <button type="button" onClick={() => { setEditId(c.id); setEditForm({ name: c.name, contactPerson: c.contactPerson ?? "", email: c.email, phone: c.phone ?? "", trade: c.trade ?? "" }); }}
                         style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "var(--muted)", display: "inline-flex" }}>
                         <Pencil size={13} />
                       </button>

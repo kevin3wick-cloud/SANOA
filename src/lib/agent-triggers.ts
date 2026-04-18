@@ -128,7 +128,7 @@ export async function onTicketCreated(ticketId: string): Promise<void> {
       .replace("SONSTIGES", "Sonstiges");
 
     for (const contractor of contractors) {
-      const emailText = `Guten Tag ${contractor.name},
+      const emailText = `${greeting(contractor)},
 
 wir haben eine neue ${ticket.isUrgent ? "DRINGENDE " : ""}Schadensmeldung erhalten und bitten Sie um Kontaktaufnahme:
 
@@ -143,7 +143,7 @@ Um einen Terminvorschlag direkt einzureichen, klicken Sie bitte auf folgenden Li
 https://app.sanoa.tech/contractor/vorschlag/${ticketId}
 
 Mit freundlichen Grüssen
-Sanoa Hausverwaltungs-System`;
+Ihre Verwaltung`;
 
       await sendEmail(
         contractor.email,
@@ -219,7 +219,7 @@ export async function onTenantMessage(ticketId: string, tenantMessage: string): 
 
 // ── Helper: find contractors for a ticket ─────────────────────────────────────
 
-async function getContractorsForTicket(ticketId: string): Promise<{ name: string; email: string }[]> {
+async function getContractorsForTicket(ticketId: string): Promise<{ name: string; contactPerson: string | null; email: string }[]> {
   const ticket = await (db.ticket as any).findUnique({
     where: { id: ticketId },
     include: { tenant: { select: { orgId: true } } },
@@ -229,8 +229,14 @@ async function getContractorsForTicket(ticketId: string): Promise<{ name: string
   const orgId = ticket.tenant?.orgId ?? null;
   return (db.contractor as any).findMany({
     where: { trade: { in: trades }, ...(orgId ? { orgId } : {}) },
-    select: { name: true, email: true },
+    select: { name: true, contactPerson: true, email: true },
   });
+}
+
+// Returns "Guten Tag [Vorname]" using contactPerson if set, else company name
+function greeting(contractor: { name: string; contactPerson: string | null }): string {
+  const addressee = contractor.contactPerson?.trim() || contractor.name;
+  return `Guten Tag ${addressee}`;
 }
 
 // ── Trigger 3: Tenant confirms appointment ────────────────────────────────────
@@ -262,7 +268,7 @@ export async function onProposalConfirmed(
       : "";
 
     for (const contractor of contractors) {
-      const text = `Guten Tag ${contractor.name},
+      const text = `${greeting(contractor)},
 
 der Mieter hat den Terminvorschlag BESTÄTIGT.
 
@@ -274,7 +280,7 @@ ${dateLabel ? `Bestätigter Termin: ${dateLabel}${timeLabel ? ` um ${timeLabel} 
 Bitte erscheinen Sie zum vereinbarten Termin.
 
 Mit freundlichen Grüssen
-Sanoa Hausverwaltungs-System`;
+Ihre Verwaltung`;
 
       await sendEmail(
         contractor.email,
@@ -309,7 +315,7 @@ export async function onProposalRejected(
     if (contractors.length === 0) return;
 
     for (const contractor of contractors) {
-      const text = `Guten Tag ${contractor.name},
+      const text = `${greeting(contractor)},
 
 der Mieter hat den Terminvorschlag leider ABGELEHNT.
 
@@ -324,7 +330,7 @@ Bitte reichen Sie einen neuen Terminvorschlag ein:
 https://app.sanoa.tech/contractor/vorschlag/${ticketId}
 
 Mit freundlichen Grüssen
-Sanoa Hausverwaltungs-System`;
+Ihre Verwaltung`;
 
       await sendEmail(
         contractor.email,

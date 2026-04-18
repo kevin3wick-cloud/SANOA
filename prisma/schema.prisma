@@ -174,14 +174,15 @@ model PushSubscription {
 }
 
 model Contractor {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  trade     String?  // e.g. Sanitär, Elektro, Maler
-  orgId     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  contactPerson String?  // Ansprechperson; falls leer → Firmenname wird verwendet
+  email         String
+  phone         String?
+  trade         String?  // e.g. Sanitär, Elektro, Maler
+  orgId         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Document {

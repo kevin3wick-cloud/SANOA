@@ -13,10 +13,11 @@ export async function PATCH(req: NextRequest, { params }) {
   const contractor = await db.contractor.update({
     where: { id },
     data: {
-      name:  body.name?.trim()  || undefined,
-      email: body.email?.trim().toLowerCase() || undefined,
-      phone: body.phone?.trim() || null,
-      trade: body.trade?.trim() || null,
+      name:          body.name?.trim()  || undefined,
+      email:         body.email?.trim().toLowerCase() || undefined,
+      phone:         body.phone?.trim() || null,
+      trade:         body.trade?.trim() || null,
+      contactPerson: body.contactPerson?.trim() || null,
     },
   });
 
