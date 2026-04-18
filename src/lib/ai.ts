@@ -237,3 +237,119 @@ Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text davor/danach):
     return null;
   }
 }
+
+/**
+ * Triage: checks if a ticket might be the tenant's responsibility under Swiss law.
+ *
+ * Returns one of:
+ * - { type: "DISPATCH" }                      → landlord responsibility, dispatch contractor immediately
+ * - { type: "QUESTION", question: "..." }     → unclear, ask tenant first before dispatching
+ * - { type: "TENANT", message: "..." }        → clearly tenant responsibility, inform and close
+ */
+export async function triageTenantResponsibility(
+  title: string,
+  description: string,
+  category: string
+): Promise<
+  | { type: "DISPATCH" }
+  | { type: "QUESTION"; question: string }
+  | { type: "TENANT"; message: string }
+> {
+  const client = getClient();
+  if (!client) return { type: "DISPATCH" };
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [
+        {
+          role: "user",
+          content: `Du bist Assistent einer Schweizer Hausverwaltung. Analysiere diese Schadensmeldung und entscheide ob zuerst eine Rückfrage an den Mieter nötig ist.
+
+Schweizer Mietrecht — Mieter ist verantwortlich für:
+- Leuchtmittel (Glühbirnen, LED) ersetzen
+- Batterien (Rauchmelder, Türklingel, Fernbedienung)
+- Verstopften Abfluss (wenn nicht durch Rohrdefekt)
+- WC-Sitz wenn durch Mieter beschädigt
+- Duschschlauch / Duschkopf (einfacher Defekt)
+- Türscharniere ölen
+- Lüftungsfilter / Dunstabzugsfilter reinigen
+- Kleine Silikon-Abdichtungen
+
+Vermieter ist verantwortlich für:
+- Heizungsanlage, Boiler
+- Elektrische Installationen (Leitungen, Sicherungen)
+- Wasserschäden, Rohre
+- Fenster/Türen (Mechanismus)
+- Strukturelle Schäden
+- Grossflächiger Schimmel
+
+Kategorie: ${category}
+Titel: ${title}
+Beschreibung: ${description}
+
+Antworte NUR mit JSON (kein Markdown):
+- Klare Mieterverantwortung: {"type":"TENANT","message":"[Erklärung auf Deutsch, 1-2 Sätze, inkl. was der Mieter selbst tun soll]"}
+- Rückfrage nötig: {"type":"QUESTION","question":"[Eine konkrete Rückfrage auf Deutsch, z.B. ob Leuchtmittel getauscht]"}
+- Vermieterverantwortung: {"type":"DISPATCH"}`,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const json = JSON.parse(text.replace(/```json|```/g, "").trim());
+    if (json.type === "TENANT") return { type: "TENANT", message: json.message };
+    if (json.type === "QUESTION") return { type: "QUESTION", question: json.question };
+    return { type: "DISPATCH" };
+  } catch {
+    return { type: "DISPATCH" }; // on error, always dispatch — never block a real problem
+  }
+}
+
+/**
+ * After a triage question was asked and the tenant responded,
+ * decide whether to dispatch the contractor or not.
+ */
+export async function shouldDispatchAfterTriageResponse(
+  title: string,
+  description: string,
+  category: string,
+  triageQuestion: string,
+  tenantResponse: string
+): Promise<{ dispatch: boolean; message: string }> {
+  const client = getClient();
+  if (!client) return { dispatch: true, message: "" };
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [
+        {
+          role: "user",
+          content: `Du bist Assistent einer Schweizer Hausverwaltung. Eine Rückfrage wurde an den Mieter gestellt.
+
+Ticket: ${title}
+Kategorie: ${category}
+Beschreibung: ${description}
+
+Gestellte Rückfrage: ${triageQuestion}
+Antwort des Mieters: ${tenantResponse}
+
+Entscheide: Soll ein Handwerker beauftragt werden?
+
+Antworte NUR mit JSON (kein Markdown):
+- Handwerker beauftragen: {"dispatch":true,"message":""}
+- Kein Handwerker nötig (Mieter löst selbst): {"dispatch":false,"message":"[Freundliche Erklärung auf Deutsch was der Mieter tun soll, 1-2 Sätze]"}`,
+        },
+      ],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const json = JSON.parse(text.replace(/```json|```/g, "").trim());
+    return { dispatch: !!json.dispatch, message: json.message ?? "" };
+  } catch {
+    return { dispatch: true, message: "" }; // on error, always dispatch
+  }
+}

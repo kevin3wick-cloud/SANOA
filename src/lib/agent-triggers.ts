@@ -6,7 +6,10 @@
  */
 
 import { db } from "@/lib/db";
-import { suggestLandlordReply } from "@/lib/ai";
+import { suggestLandlordReply, triageTenantResponsibility } from "@/lib/ai";
+
+// Internal note marker used to track triage state
+const TRIAGE_PENDING_MARKER = "[TRIAGE_PENDING]";
 
 // ── Category → Trade mapping ──────────────────────────────────────────────────
 
@@ -96,7 +99,55 @@ export async function onTicketCreated(ticketId: string): Promise<void> {
       },
     });
 
-    // 2. Find matching contractors by trade + orgId
+    // 2. Triage — check if this might be the tenant's responsibility (skip for urgent tickets)
+    if (!ticket.isUrgent) {
+      const triage = await triageTenantResponsibility(ticket.title, ticket.description, ticket.category);
+
+      if (triage.type === "TENANT") {
+        // Clearly tenant's responsibility — inform tenant, don't dispatch contractor
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: `ℹ️ ${triage.message}`,
+            isInternal: false,
+            isTenantAuthor: false,
+          },
+        });
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: `ℹ️ KI-Triage: Mieterverantwortung erkannt — kein Handwerker kontaktiert.`,
+            isInternal: true,
+            isTenantAuthor: false,
+          },
+        });
+        return;
+      }
+
+      if (triage.type === "QUESTION") {
+        // Ask tenant first — store pending state as internal note, don't dispatch yet
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: triage.question,
+            isInternal: false,
+            isTenantAuthor: false,
+          },
+        });
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: `${TRIAGE_PENDING_MARKER} Rückfrage gestellt: ${triage.question}`,
+            isInternal: true,
+            isTenantAuthor: false,
+          },
+        });
+        return; // wait for tenant response before dispatching
+      }
+      // type === "DISPATCH" → fall through to normal contractor dispatch
+    }
+
+    // 3. Find matching contractors by trade + orgId
     const trades = CATEGORY_TO_TRADE[ticket.category as string] ?? ["Sonstiges"];
     const contractors = await (db.contractor as any).findMany({
       where: {
@@ -154,7 +205,7 @@ Ihre Verwaltung`;
       );
     }
 
-    // 4. Add internal note for landlord with summary
+    // 5. Add internal note for landlord with summary
     const contractorNames = contractors.map((c: any) => c.name).join(", ");
     await db.ticketNote.create({
       data: {
@@ -183,26 +234,65 @@ export async function onTenantMessage(ticketId: string, tenantMessage: string): 
       where: { id: ticketId },
       include: {
         notes: {
-          where: { isInternal: false },
           orderBy: { createdAt: "asc" },
-          select: { text: true, isTenantAuthor: true, createdAt: true },
+          select: { text: true, isTenantAuthor: true, isInternal: true, createdAt: true },
         },
-        tenant: { select: { name: true } },
+        tenant: { select: { name: true, orgId: true, apartment: true } },
       },
     });
 
     if (!ticket) return;
 
-    // Build chat history for context
+    // Check if there's a pending triage question
+    const triagePendingNote = ticket.notes.find(
+      (n: any) => n.isInternal && n.text.startsWith(TRIAGE_PENDING_MARKER)
+    );
+
+    if (triagePendingNote) {
+      // Tenant has answered the triage question — decide whether to dispatch
+      const client = await import("@/lib/ai");
+      const shouldDispatch = await client.shouldDispatchAfterTriageResponse(
+        ticket.title,
+        ticket.description,
+        ticket.category,
+        triagePendingNote.text.replace(TRIAGE_PENDING_MARKER, "").trim(),
+        tenantMessage
+      );
+
+      if (shouldDispatch.dispatch) {
+        // Delete the triage pending note and dispatch contractor
+        await db.ticketNote.deleteMany({
+          where: { ticketId, text: { startsWith: TRIAGE_PENDING_MARKER } },
+        } as any);
+        // Trigger contractor dispatch
+        void onTicketCreated(ticketId);
+        return;
+      } else {
+        // Still tenant's responsibility or issue resolved
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: shouldDispatch.message,
+            isInternal: false,
+            isTenantAuthor: false,
+          },
+        });
+        await db.ticketNote.deleteMany({
+          where: { ticketId, text: { startsWith: TRIAGE_PENDING_MARKER } },
+        } as any);
+        return;
+      }
+    }
+
+    // No triage pending — normal auto-reply
     const chatHistory = ticket.notes
+      .filter((n: any) => !n.isInternal)
       .map((n: any) => `${n.isTenantAuthor ? "Mieter" : "Verwaltung"}: ${n.text}`)
       .join("\n");
 
-    // Get AI reply suggestion
     const reply = await suggestLandlordReply(ticket.title, ticket.description, chatHistory);
     if (!reply || reply.length < 10) return;
 
-    // Post auto-reply as a ticket note
     await db.ticketNote.create({
       data: {
         ticketId,
