@@ -147,39 +147,46 @@ export async function onTicketCreated(ticketId: string): Promise<void> {
       // type === "DISPATCH" → fall through to normal contractor dispatch
     }
 
-    // 3. Find matching contractors by trade + orgId
-    const trades = CATEGORY_TO_TRADE[ticket.category as string] ?? ["Sonstiges"];
-    const contractors = await (db.contractor as any).findMany({
-      where: {
-        trade: { in: trades },
-        ...(orgId ? { orgId } : {}),
+    // 3–5. Dispatch contractors
+    await dispatchContractors(ticketId, ticket, orgId);
+
+  } catch (e) {
+    console.error("[Agent] onTicketCreated error:", e);
+    // Never throw — agent failures must not break ticket creation
+  }
+}
+
+// ── Shared dispatch helper ────────────────────────────────────────────────────
+
+async function dispatchContractors(
+  ticketId: string,
+  ticket: any,
+  orgId: string | null
+): Promise<void> {
+  const trades = CATEGORY_TO_TRADE[ticket.category as string] ?? ["Sonstiges"];
+  const contractors = await (db.contractor as any).findMany({
+    where: { trade: { in: trades }, ...(orgId ? { orgId } : {}) },
+  });
+
+  if (contractors.length === 0) {
+    await db.ticketNote.create({
+      data: {
+        ticketId,
+        text: `ℹ️ KI-Agent: Kein passender Handwerker für Kategorie "${ticket.category}" gefunden. Bitte manuell zuweisen.`,
+        isInternal: true,
+        isTenantAuthor: false,
       },
     });
+    return;
+  }
 
-    if (contractors.length === 0) {
-      // No contractor for this category → add internal note for landlord
-      await db.ticketNote.create({
-        data: {
-          ticketId,
-          text: `ℹ️ KI-Agent: Kein passender Handwerker für Kategorie "${ticket.category}" gefunden. Bitte manuell zuweisen.`,
-          isInternal: true,
-          isTenantAuthor: false,
-        },
-      });
-      return;
-    }
+  const categoryLabel = (ticket.category as string)
+    .replace("SANITAER", "Sanitär").replace("HEIZUNG", "Heizung")
+    .replace("ELEKTRO", "Elektro").replace("FENSTER_TUEREN", "Fenster/Türen")
+    .replace("ALLGEMEIN", "Allgemein").replace("SONSTIGES", "Sonstiges");
 
-    // 3. Send email to each matching contractor
-    const categoryLabel = ticket.category
-      .replace("SANITAER", "Sanitär")
-      .replace("HEIZUNG", "Heizung")
-      .replace("ELEKTRO", "Elektro")
-      .replace("FENSTER_TUEREN", "Fenster/Türen")
-      .replace("ALLGEMEIN", "Allgemein")
-      .replace("SONSTIGES", "Sonstiges");
-
-    for (const contractor of contractors) {
-      const emailText = `${greeting(contractor)},
+  for (const contractor of contractors) {
+    const emailText = `${greeting(contractor)},
 
 wir haben eine neue ${ticket.isUrgent ? "DRINGENDE " : ""}Schadensmeldung erhalten und bitten Sie um Kontaktaufnahme:
 
@@ -196,30 +203,24 @@ https://app.sanoa.tech/contractor/vorschlag/${ticketId}
 Mit freundlichen Grüssen
 Ihre Verwaltung`;
 
-      await sendEmail(
-        contractor.email,
-        `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
-        emailText,
-        orgId,
-        `ticket-${ticketId}@quautoliod.resend.app`  // Reply routes back via Resend inbound webhook
-      );
-    }
-
-    // 5. Add internal note for landlord with summary
-    const contractorNames = contractors.map((c: any) => c.name).join(", ");
-    await db.ticketNote.create({
-      data: {
-        ticketId,
-        text: `✅ KI-Agent: Eingangsbestätigung an Mieter gesendet. E-Mail an Handwerker: ${contractorNames}.`,
-        isInternal: true,
-        isTenantAuthor: false,
-      },
-    });
-
-  } catch (e) {
-    console.error("[Agent] onTicketCreated error:", e);
-    // Never throw — agent failures must not break ticket creation
+    await sendEmail(
+      contractor.email,
+      `${ticket.isUrgent ? "⚡ DRINGEND: " : ""}Neue Schadensmeldung — ${categoryLabel} — ${ticket.tenant?.apartment} [TKT-${ticketId}]`,
+      emailText,
+      orgId,
+      `ticket-${ticketId}@quautoliod.resend.app`
+    );
   }
+
+  const contractorNames = contractors.map((c: any) => c.name).join(", ");
+  await db.ticketNote.create({
+    data: {
+      ticketId,
+      text: `✅ KI-Agent: E-Mail an Handwerker gesendet: ${contractorNames}.`,
+      isInternal: true,
+      isTenantAuthor: false,
+    },
+  });
 }
 
 // ── Trigger 2: Tenant sends a message ────────────────────────────────────────
@@ -250,8 +251,8 @@ export async function onTenantMessage(ticketId: string, tenantMessage: string): 
 
     if (triagePendingNote) {
       // Tenant has answered the triage question — decide whether to dispatch
-      const client = await import("@/lib/ai");
-      const shouldDispatch = await client.shouldDispatchAfterTriageResponse(
+      const { shouldDispatchAfterTriageResponse } = await import("@/lib/ai");
+      const result = await shouldDispatchAfterTriageResponse(
         ticket.title,
         ticket.description,
         ticket.category,
@@ -259,29 +260,40 @@ export async function onTenantMessage(ticketId: string, tenantMessage: string): 
         tenantMessage
       );
 
-      if (shouldDispatch.dispatch) {
-        // Delete the triage pending note and dispatch contractor
-        await db.ticketNote.deleteMany({
-          where: { ticketId, text: { startsWith: TRIAGE_PENDING_MARKER } },
-        } as any);
-        // Trigger contractor dispatch
-        void onTicketCreated(ticketId);
-        return;
-      } else {
-        // Still tenant's responsibility or issue resolved
+      // Remove triage pending marker regardless of outcome
+      await (db.ticketNote as any).deleteMany({
+        where: { ticketId, text: { startsWith: TRIAGE_PENDING_MARKER } },
+      });
+
+      if (result.dispatch) {
+        // Load full ticket data needed for dispatch
+        const fullTicket = await (db.ticket as any).findUnique({
+          where: { id: ticketId },
+          include: { tenant: { select: { name: true, apartment: true, orgId: true } } },
+        });
+        const orgId = fullTicket?.tenant?.orgId ?? null;
+        await dispatchContractors(ticketId, fullTicket, orgId);
+        // Inform tenant
         await db.ticketNote.create({
           data: {
             ticketId,
-            text: shouldDispatch.message,
+            text: `Vielen Dank für Ihre Rückmeldung. Wir haben einen Handwerker kontaktiert und melden uns mit einem Terminvorschlag.`,
             isInternal: false,
             isTenantAuthor: false,
           },
         });
-        await db.ticketNote.deleteMany({
-          where: { ticketId, text: { startsWith: TRIAGE_PENDING_MARKER } },
-        } as any);
-        return;
+      } else if (result.message) {
+        // Tenant can resolve themselves
+        await db.ticketNote.create({
+          data: {
+            ticketId,
+            text: `ℹ️ ${result.message}`,
+            isInternal: false,
+            isTenantAuthor: false,
+          },
+        });
       }
+      return;
     }
 
     // No triage pending — normal auto-reply
